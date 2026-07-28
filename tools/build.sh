@@ -3,9 +3,10 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIGURATION="${1:-Debug}"
-OUTPUT="$ROOT/build/$CONFIGURATION"
-LOG="$ROOT/build/build-${CONFIGURATION}.log"
-MANIFEST="$ROOT/build/build-${CONFIGURATION}.manifest.txt"
+BUILD_ROOT="$ROOT/build"
+OUTPUT="$BUILD_ROOT/$CONFIGURATION"
+LOG="$BUILD_ROOT/build-${CONFIGURATION}.log"
+MANIFEST="$BUILD_ROOT/build-${CONFIGURATION}.manifest.txt"
 
 [[ "$(uname -s)" == "Darwin" ]] || { echo "Build must run on macOS." >&2; exit 2; }
 XCODE_VERSION="$(xcodebuild -version | sed -n '1s/^Xcode //p')"
@@ -16,6 +17,18 @@ SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
 [[ -f "$ROOT/MacKernelSDK.lock" ]] || { echo "Missing MacKernelSDK.lock." >&2; exit 2; }
 
 python3 "$ROOT/tools/safety-audit.py"
+
+# Do not pass `clean build` to xcodebuild while CONFIGURATION_BUILD_DIR lives
+# inside a directory created by this script. Xcode 16 refuses to delete such
+# directories during its clean phase and returns exit code 65 even when the
+# following build succeeds. Remove only our known generated paths ourselves.
+mkdir -p "$BUILD_ROOT"
+rm -rf \
+  "$OUTPUT" \
+  "$BUILD_ROOT/TuringProbe.build" \
+  "$BUILD_ROOT/EagerLinkingTBDs" \
+  "$BUILD_ROOT/ModuleCache.noindex" \
+  "$BUILD_ROOT/SDKStatCaches.noindex"
 mkdir -p "$OUTPUT"
 
 {
@@ -36,12 +49,13 @@ xcodebuild \
   -configuration "$CONFIGURATION" \
   ARCHS=x86_64 ONLY_ACTIVE_ARCH=YES \
   CONFIGURATION_BUILD_DIR="$OUTPUT" \
-  clean build | tee "$LOG"
+  build | tee "$LOG"
 
 KEXT="$OUTPUT/TuringProbe.kext"
 [[ -d "$KEXT" ]] || { echo "Expected output missing: $KEXT" >&2; exit 4; }
+[[ -f "$KEXT/Contents/MacOS/TuringProbe" ]] || { echo "Expected executable missing." >&2; exit 4; }
 plutil -lint "$KEXT/Contents/Info.plist"
-kextutil -n "$KEXT" 2>&1 | tee "$ROOT/build/kextutil-${CONFIGURATION}.txt" || true
-/usr/bin/codesign -dv --verbose=4 "$KEXT" > "$ROOT/build/codesign-${CONFIGURATION}.txt" 2>&1 || true
+kextutil -n "$KEXT" 2>&1 | tee "$BUILD_ROOT/kextutil-${CONFIGURATION}.txt" || true
+/usr/bin/codesign -dv --verbose=4 "$KEXT" > "$BUILD_ROOT/codesign-${CONFIGURATION}.txt" 2>&1 || true
 shasum -a 256 "$KEXT/Contents/MacOS/TuringProbe" >> "$MANIFEST"
 echo "Built: $KEXT"
