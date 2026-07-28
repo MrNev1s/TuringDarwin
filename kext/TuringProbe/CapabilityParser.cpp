@@ -3,6 +3,7 @@
 #include <libkern/c++/OSArray.h>
 #include <libkern/c++/OSDictionary.h>
 #include <libkern/c++/OSNumber.h>
+#include <libkern/c++/OSString.h>
 
 #include "PCIConfig.hpp"
 
@@ -14,12 +15,24 @@ constexpr UInt32 kMaximumConventionalNodes = 48;
 constexpr UInt32 kMaximumExtendedNodes = 128;
 constexpr UInt16 kExtendedCapabilitiesStart = 0x100;
 constexpr UInt16 kExtendedCapabilitiesEnd = 0xFFC;
+constexpr UInt32 kExtendedConfigBytes = 4096;
 
 constexpr UInt8 kCapabilityPowerManagement = 0x01;
 constexpr UInt8 kCapabilityMsi = 0x05;
 constexpr UInt8 kCapabilityPcie = 0x10;
 constexpr UInt8 kCapabilityMsix = 0x11;
 constexpr UInt16 kExtendedCapabilityResizableBar = 0x0015;
+
+constexpr UInt16 kResizableBarCapabilityRegister = 0x04;
+constexpr UInt16 kResizableBarControlRegister = 0x08;
+constexpr UInt32 kResizableBarSupportedSizesMask = 0xFFFFFFF0U;
+constexpr UInt32 kResizableBarIndexMask = 0x00000007U;
+constexpr UInt32 kResizableBarCountMask = 0x000000E0U;
+constexpr UInt32 kResizableBarCountShift = 5U;
+constexpr UInt32 kResizableBarCurrentSizeMask = 0x00001F00U;
+constexpr UInt32 kResizableBarCurrentSizeShift = 8U;
+constexpr UInt32 kMaximumResizableBarEntries = 6U;
+constexpr UInt32 kMaximumResizableBarSizeEncoding = 27U;
 
 void dictionaryNumber(OSDictionary *dictionary, const char *key,
                       UInt64 value, unsigned int bits) {
@@ -35,6 +48,45 @@ void dictionaryBoolean(OSDictionary *dictionary, const char *key, bool value) {
     dictionary->setObject(key, value ? kOSBooleanTrue : kOSBooleanFalse);
 }
 
+void dictionaryString(OSDictionary *dictionary, const char *key,
+                      const char *value) {
+    if (dictionary == nullptr || key == nullptr || value == nullptr) return;
+    OSString *string = OSString::withCString(value);
+    if (string == nullptr) return;
+    dictionary->setObject(key, string);
+    string->release();
+}
+
+const char *conventionalCapabilityName(UInt8 id) {
+    switch (id) {
+        case 0x01: return "Power Management";
+        case 0x02: return "Accelerated Graphics Port";
+        case 0x03: return "Vital Product Data";
+        case 0x05: return "MSI";
+        case 0x09: return "Vendor-Specific";
+        case 0x10: return "PCI Express";
+        case 0x11: return "MSI-X";
+        case 0x13: return "Advanced Features";
+        case 0x14: return "Enhanced Allocation";
+        default: return "Unknown";
+    }
+}
+
+const char *extendedCapabilityName(UInt16 id) {
+    switch (id) {
+        case 0x0001: return "Advanced Error Reporting";
+        case 0x0002: return "Virtual Channel";
+        case 0x0003: return "Device Serial Number";
+        case 0x0004: return "Power Budgeting";
+        case 0x000B: return "Vendor-Specific Extended Capability";
+        case 0x0015: return "Resizable BAR";
+        case 0x0018: return "Latency Tolerance Reporting";
+        case 0x0019: return "Secondary PCI Express";
+        case 0x001E: return "L1 PM Substates";
+        default: return "Unknown";
+    }
+}
+
 bool conventionalRangeFits(UInt16 offset, UInt16 byteCount) {
     return offset < kConventionalConfigBytes &&
            byteCount <= kConventionalConfigBytes &&
@@ -42,10 +94,143 @@ bool conventionalRangeFits(UInt16 offset, UInt16 byteCount) {
 }
 
 bool extendedRangeFits(UInt16 offset, UInt16 byteCount) {
-    constexpr UInt32 kExtendedConfigBytes = 4096;
     return offset < kExtendedConfigBytes &&
            byteCount <= kExtendedConfigBytes &&
            offset <= kExtendedConfigBytes - byteCount;
+}
+
+bool extendedRangeFitsCapability(UInt16 offset, UInt16 byteCount,
+                                 UInt16 nextCapabilityOffset) {
+    if (!extendedRangeFits(offset, byteCount)) return false;
+    const UInt32 end = static_cast<UInt32>(offset) + byteCount;
+    const UInt32 limit = nextCapabilityOffset == 0
+        ? kExtendedConfigBytes
+        : static_cast<UInt32>(nextCapabilityOffset);
+    return end <= limit;
+}
+
+UInt64 resizableBarSizeBytes(UInt32 encoding) {
+    // PCIe Resizable BAR size encoding n represents 2^(n + 20) bytes.
+    if (encoding > 43U) return 0;
+    return static_cast<UInt64>(1) << (encoding + 20U);
+}
+
+void decodeResizableBars(IOPCIDevice *device, IOService *owner,
+                         UInt16 capabilityOffset, UInt16 nextCapabilityOffset) {
+    publishNumber(owner, "TPResizableBARCapabilityOffset", capabilityOffset, 16);
+
+    if (!extendedRangeFitsCapability(
+            capabilityOffset + kResizableBarCapabilityRegister, 8,
+            nextCapabilityOffset)) {
+        publishBoolean(owner, "TPResizableBARDecodeValid", false);
+        return;
+    }
+
+    const UInt32 firstCapability = device->extendedConfigRead32(
+        capabilityOffset + kResizableBarCapabilityRegister);
+    const UInt32 firstControl = device->extendedConfigRead32(
+        capabilityOffset + kResizableBarControlRegister);
+    const UInt32 entryCount =
+        (firstControl & kResizableBarCountMask) >> kResizableBarCountShift;
+
+    // Preserve the v0.1 compatibility properties.
+    publishNumber(owner, "TPResizableBARCapability0",
+                  static_cast<UInt64>(firstCapability), 64);
+    publishNumber(owner, "TPResizableBARControl0",
+                  static_cast<UInt64>(firstControl), 64);
+    publishNumber(owner, "TPResizableBARCountField", entryCount, 8);
+
+    if (entryCount == 0 || entryCount > kMaximumResizableBarEntries) {
+        publishBoolean(owner, "TPResizableBARDecodeValid", false);
+        publishNumber(owner, "TPResizableBARDecodedEntryCount", 0, 8);
+        return;
+    }
+
+    OSArray *entries = OSArray::withCapacity(entryCount);
+    if (entries == nullptr) {
+        publishBoolean(owner, "TPResizableBARDecodeValid", false);
+        return;
+    }
+
+    bool valid = true;
+    UInt32 decodedCount = 0;
+    for (UInt32 index = 0; index < entryCount; ++index) {
+        const UInt32 entryBase = static_cast<UInt32>(capabilityOffset) +
+                                 kResizableBarCapabilityRegister + index * 8U;
+        if (entryBase > 0xFFFFU ||
+            !extendedRangeFitsCapability(static_cast<UInt16>(entryBase), 8,
+                                         nextCapabilityOffset)) {
+            valid = false;
+            break;
+        }
+
+        const UInt16 capabilityRegisterOffset = static_cast<UInt16>(entryBase);
+        const UInt16 controlRegisterOffset =
+            static_cast<UInt16>(entryBase + 4U);
+        const UInt32 capability =
+            device->extendedConfigRead32(capabilityRegisterOffset);
+        const UInt32 control =
+            device->extendedConfigRead32(controlRegisterOffset);
+        const UInt32 barIndex = control & kResizableBarIndexMask;
+        const UInt32 sizeEncoding =
+            (control & kResizableBarCurrentSizeMask) >>
+            kResizableBarCurrentSizeShift;
+        const UInt32 supportedSizeMask =
+            (capability & kResizableBarSupportedSizesMask) >> 4U;
+        const UInt64 currentSizeBytes = resizableBarSizeBytes(sizeEncoding);
+        const bool currentSizeAdvertised =
+            sizeEncoding <= kMaximumResizableBarSizeEncoding &&
+            (supportedSizeMask & (1U << sizeEncoding)) != 0;
+
+        OSDictionary *entry = OSDictionary::withCapacity(14);
+        if (entry == nullptr) {
+            valid = false;
+            break;
+        }
+
+        dictionaryNumber(entry, "EntryIndex", index, 8);
+        dictionaryNumber(entry, "CapabilityRegisterOffset",
+                         capabilityRegisterOffset, 16);
+        dictionaryNumber(entry, "ControlRegisterOffset",
+                         controlRegisterOffset, 16);
+        dictionaryNumber(entry, "CapabilityRaw",
+                         static_cast<UInt64>(capability), 64);
+        dictionaryNumber(entry, "ControlRaw",
+                         static_cast<UInt64>(control), 64);
+        dictionaryNumber(entry, "BARIndex", barIndex, 8);
+        dictionaryBoolean(entry, "BARIndexValid", barIndex < 6U);
+        dictionaryNumber(entry, "SupportedSizeMask", supportedSizeMask, 32);
+        dictionaryNumber(entry, "CurrentSizeEncoding", sizeEncoding, 8);
+        dictionaryNumber(entry, "CurrentSizeBytes", currentSizeBytes, 64);
+        dictionaryBoolean(entry, "CurrentSizeAdvertised",
+                          currentSizeAdvertised);
+
+        OSArray *supportedSizes = OSArray::withCapacity(8);
+        if (supportedSizes != nullptr) {
+            for (UInt32 encoding = 0;
+                 encoding <= kMaximumResizableBarSizeEncoding;
+                 ++encoding) {
+                if ((supportedSizeMask & (1U << encoding)) == 0) continue;
+                OSNumber *size = OSNumber::withNumber(
+                    resizableBarSizeBytes(encoding), 64);
+                if (size == nullptr) continue;
+                supportedSizes->setObject(size);
+                size->release();
+            }
+            entry->setObject("SupportedSizesBytes", supportedSizes);
+            supportedSizes->release();
+        }
+
+        entries->setObject(entry);
+        entry->release();
+        ++decodedCount;
+    }
+
+    publishNumber(owner, "TPResizableBARDecodedEntryCount", decodedCount, 8);
+    publishBoolean(owner, "TPResizableBARDecodeValid",
+                   valid && decodedCount == entryCount);
+    owner->setProperty("TPResizableBAREntries", entries);
+    entries->release();
 }
 
 void decodeConventional(IOPCIDevice *device, IOService *owner,
@@ -127,16 +312,22 @@ void publishConventionalCapabilities(IOPCIDevice *device, IOService *owner) {
             const UInt8 id = device->configRead8(offset);
             const UInt16 next = device->configRead8(offset + 1U) & 0xFCU;
 
-            OSDictionary *entry = OSDictionary::withCapacity(7);
+            OSDictionary *entry = OSDictionary::withCapacity(9);
             if (entry != nullptr) {
                 dictionaryNumber(entry, "ID", id, 8);
+                dictionaryString(entry, "Name", conventionalCapabilityName(id));
+                dictionaryBoolean(entry, "Known",
+                                  conventionalCapabilityName(id)[0] != 'U');
                 dictionaryNumber(entry, "Offset", offset, 16);
                 dictionaryNumber(entry, "Next", next, 16);
-                dictionaryNumber(entry, "Raw0", device->configRead32(offset), 32);
+                dictionaryNumber(entry, "Raw0",
+                                 static_cast<UInt64>(device->configRead32(offset)), 64);
                 if (conventionalRangeFits(offset, 8))
-                    dictionaryNumber(entry, "Raw1", device->configRead32(offset + 4U), 32);
+                    dictionaryNumber(entry, "Raw1",
+                                     static_cast<UInt64>(device->configRead32(offset + 4U)), 64);
                 if (conventionalRangeFits(offset, 12))
-                    dictionaryNumber(entry, "Raw2", device->configRead32(offset + 8U), 32);
+                    dictionaryNumber(entry, "Raw2",
+                                     static_cast<UInt64>(device->configRead32(offset + 8U)), 64);
                 capabilities->setObject(entry);
                 entry->release();
             }
@@ -188,32 +379,29 @@ void publishExtendedCapabilities(IOPCIDevice *device, IOService *owner) {
         const UInt8 version = (header >> 16U) & 0xFU;
         const UInt16 next = (header >> 20U) & 0xFFFU;
 
-        OSDictionary *entry = OSDictionary::withCapacity(8);
+        OSDictionary *entry = OSDictionary::withCapacity(10);
         if (entry != nullptr) {
             dictionaryNumber(entry, "ID", id, 16);
+            dictionaryString(entry, "Name", extendedCapabilityName(id));
+            dictionaryBoolean(entry, "Known",
+                              extendedCapabilityName(id)[0] != 'U');
             dictionaryNumber(entry, "Version", version, 8);
             dictionaryNumber(entry, "Offset", offset, 16);
             dictionaryNumber(entry, "Next", next, 16);
-            dictionaryNumber(entry, "Header", header, 32);
+            dictionaryNumber(entry, "Header", static_cast<UInt64>(header), 64);
             if (extendedRangeFits(offset, 8))
-                dictionaryNumber(entry, "Raw1", device->extendedConfigRead32(offset + 4U), 32);
+                dictionaryNumber(entry, "Raw1",
+                                 static_cast<UInt64>(device->extendedConfigRead32(offset + 4U)), 64);
             if (extendedRangeFits(offset, 12))
-                dictionaryNumber(entry, "Raw2", device->extendedConfigRead32(offset + 8U), 32);
+                dictionaryNumber(entry, "Raw2",
+                                 static_cast<UInt64>(device->extendedConfigRead32(offset + 8U)), 64);
             capabilities->setObject(entry);
             entry->release();
         }
 
         if (id == kExtendedCapabilityResizableBar) {
             resizableBarPresent = true;
-            publishNumber(owner, "TPResizableBARCapabilityOffset", offset, 16);
-            if (extendedRangeFits(offset, 8)) {
-                publishNumber(owner, "TPResizableBARCapability0",
-                              device->extendedConfigRead32(offset + 4U), 32);
-            }
-            if (extendedRangeFits(offset, 12)) {
-                publishNumber(owner, "TPResizableBARControl0",
-                              device->extendedConfigRead32(offset + 8U), 32);
-            }
+            decodeResizableBars(device, owner, offset, next);
         }
 
         ++count;

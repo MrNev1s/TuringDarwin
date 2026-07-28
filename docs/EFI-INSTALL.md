@@ -25,5 +25,5 @@ Do not alter the known-good `EFI_STABLE` copy.
 5. Run the matching `ocvalidate` from the OpenCore release used by that EFI.
 6. Boot the USB explicitly from the motherboard boot menu.
 
-Do not add `-tdmmio-read` or `-tdunsafe`; v0.1 rejects them. Keep `-tdoff`
+Do not add `-tdmmio-read` or `-tdunsafe`; v0.1.1 rejects them. Keep `-tdoff`
 available as the emergency disable argument.

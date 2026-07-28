@@ -78,7 +78,7 @@ void publishPciSnapshot(IOPCIDevice *device, IOService *owner) {
     publishNumber(owner, "TPInterruptPin",
                   device->configRead8(kPciInterruptPinOffset), 8);
     publishNumber(owner, "TPExpansionRomBARRaw",
-                  device->configRead32(kPciExpansionRomOffset), 32);
+                  static_cast<UInt64>(device->configRead32(kPciExpansionRomOffset)), 64);
     publishNumber(owner, "TPBusNumber", device->getBusNumber(), 8);
     publishNumber(owner, "TPDeviceNumber", device->getDeviceNumber(), 8);
     publishNumber(owner, "TPFunctionNumber", device->getFunctionNumber(), 8);
@@ -88,14 +88,15 @@ void publishPciSnapshot(IOPCIDevice *device, IOService *owner) {
         const UInt16 offset = static_cast<UInt16>(kPciBar0Offset + index * 4U);
         char key[24] {};
         snprintf(key, sizeof(key), "TPBAR%uRaw", index);
-        publishNumber(owner, key, device->configRead32(offset), 32);
+        publishNumber(owner, key,
+                      static_cast<UInt64>(device->configRead32(offset)), 64);
     }
 }
 
 void publishRegistryPaths(IOPCIDevice *device, IOService *owner) {
     publishPath(device, owner, "TPIOServicePath", gIOServicePlane);
     publishPath(device, owner, "TPIODeviceTreePath",
-            IORegistryEntry::getPlane("IODeviceTree"));
+                IORegistryEntry::getPlane("IODeviceTree"));
 
     const char *name = device != nullptr ? device->getName(gIOServicePlane) : nullptr;
     const char *location = device != nullptr ? device->getLocation(gIOServicePlane) : nullptr;

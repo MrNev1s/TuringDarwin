@@ -26,7 +26,7 @@ bool TuringProbe::start(IOService *provider) {
     }
 
     if (bootArgumentPresent("-tdmmio-read") || bootArgumentPresent("-tdunsafe")) {
-        TD_LOG("v0.1 rejects modes beyond the read-only PCI probe");
+        TD_LOG("v0.1.1 rejects modes beyond the read-only PCI probe");
         return false;
     }
 
@@ -42,6 +42,7 @@ bool TuringProbe::start(IOService *provider) {
     }
 
     const td::PciIdentity identity = td::readIdentity(candidate);
+    const UInt16 commandBeforeProbe = candidate->configRead16(td::kPciCommandOffset);
     if (!td::isExactTarget(identity)) {
         TD_LOG("refusing PCI function %04x:%04x subsystem %04x:%04x",
                identity.vendor, identity.device,
@@ -63,8 +64,26 @@ bool TuringProbe::start(IOService *provider) {
     td::publishCapabilities(pciDevice_, this);
     td::publishBarAndMemoryDescriptors(pciDevice_, this);
 
+    const UInt16 commandAfterProbe = pciDevice_->configRead16(td::kPciCommandOffset);
+    td::publishNumber(this, "TPCommandBeforeProbe", commandBeforeProbe, 16);
+    td::publishNumber(this, "TPCommandAfterProbe", commandAfterProbe, 16);
+    td::publishBoolean(this, "TPCommandUnchanged",
+                       commandBeforeProbe == commandAfterProbe);
+    td::publishBoolean(this, "TPBusMasterEnabledBeforeProbe",
+                       (commandBeforeProbe & 0x0004U) != 0);
+    td::publishBoolean(this, "TPBusMasterEnabledAfterProbe",
+                       (commandAfterProbe & 0x0004U) != 0);
+    td::publishBoolean(this, "TPIOSpaceEnabled",
+                       (commandAfterProbe & 0x0001U) != 0);
+    td::publishBoolean(this, "TPMemorySpaceEnabled",
+                       (commandAfterProbe & 0x0002U) != 0);
+
     setProperty("TuringProbeSafeReadOnly", kOSBooleanTrue);
-    setProperty("TuringProbeMilestone", "PCI-CONFIG-READ-ONLY-V0.1");
+    setProperty("TuringProbeProbeCompleted", kOSBooleanTrue);
+    setProperty("TuringProbeProbeSchemaVersion", "2");
+    setProperty("TuringProbeVersion", "0.1.1");
+    setProperty("TuringProbeBootMode", "-tdprobe");
+    setProperty("TuringProbeMilestone", "PCI-CONFIG-READ-ONLY-V0.1.1");
     setProperty("TuringProbeTarget", "NVIDIA TU116 10DE:2182 / ASUS 1043:8854");
     setProperty("TuringProbePCIConfigWrites", kOSBooleanFalse);
     setProperty("TuringProbeMMIOAccess", kOSBooleanFalse);
@@ -83,7 +102,7 @@ bool TuringProbe::start(IOService *provider) {
 }
 
 void TuringProbe::stop(IOService *provider) {
-    TD_LOG("stop; no hardware state was changed by v0.1");
+    TD_LOG("stop; no hardware state was changed by v0.1.1");
     if (pciDevice_ != nullptr) {
         pciDevice_->release();
         pciDevice_ = nullptr;

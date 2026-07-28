@@ -66,4 +66,4 @@ if errors:
     print("\n".join(errors), file=sys.stderr)
     raise SystemExit(1)
 
-print("SAFETY AUDIT PASSED: v0.1 source contains only approved read/metadata primitives")
+print("SAFETY AUDIT PASSED: v0.1.1 source contains only approved read/metadata primitives")

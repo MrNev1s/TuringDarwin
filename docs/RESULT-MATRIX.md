@@ -1,23 +1,21 @@
 # Verification and experiment matrix
 
-This matrix deliberately separates offline evidence, source verification and
-future hardware experiments.
-
 | Item | Status | Evidence / next proof |
 |---|---|---|
-| macOS Sequoia reaches desktop on GTX 1660 Ti GOP | Reported as verified on the real PC by the user | Existing working installation; not re-tested by this package |
-| GPU primary ID `10DE:2182` | Confirmed offline | PC-DATA device inventory and VBIOS PCIR headers |
-| ASUS subsystem `1043:8854` | Confirmed offline | PC-DATA device inventory |
-| PCI BDF `01:00.0` and multifunction siblings | Confirmed offline | PC-DATA Windows PnP properties |
-| VBIOS file hash and embedded ROM checksums | Confirmed offline | `tools/verify-rom.py` against supplied ROM |
-| Stable EFI configuration inventory | Confirmed offline | Parsed supplied `EFI_STABLE.zip` |
-| v0.1 source contains no authorised write/MMIO/DMA primitives | Static audit passed | `tools/safety-audit.py`; this is not runtime proof |
-| `Info.plist` and OpenCore entry parse | Offline validation passed | Python plist parser; repeat with `plutil` on macOS |
-| Xcode 16.2 compilation | Not yet verified | Run `tools/build.sh Debug` on Sequoia with SDK 15.2 |
-| Kext attachment and IORegistry publication | Requires first experiment | Separate test EFI with `-tdprobe` |
-| Exact live BAR bases and lengths | Requires first experiment | `TPBARDescriptors` and `TPMemoryRanges` |
-| Exact capability offsets and live link state | Requires first experiment | `TPConventionalCapabilities` and `TPExtendedCapabilities` |
-| Read-only MMIO | Not authorised | Separate reviewed milestone and explicit user approval required |
-| Copy Engine / DMA / channels | Research only | No implementation in v0.1 |
-| Vulkan/NVK | Theoretically possible but major project | No implementation in v0.1 |
-| WindowServer/Metal acceleration | Practically very difficult | Private interfaces and extensive reverse engineering required |
+| Sequoia desktop through GTX 1660 Ti GOP | **Real hardware verified** | macOS 15.7.7 runtime logs |
+| GPU exact match `10DE:2182 / 1043:8854` | **Real hardware verified** | active TuringProbe IORegistry service |
+| VBIOS hash and embedded ROM checksums | **Offline verified** | supplied ROM and parser |
+| TuringProbe 0.1.0 Xcode build | **Verified** | GitHub Actions build #9 |
+| TuringProbe 0.1.0 attachment | **Verified** | `kmutil` and IORegistry |
+| Bus mastering remains disabled | **Verified during 0.1.0 probe** | Command Register `0x0003` |
+| Exact live BAR bases and lengths | **Verified** | IODeviceMemory and TPBAR descriptors |
+| Conventional and extended capability chain | **Verified** | live extended config reads |
+| TuringProbe 0.1.1 source safety audit | **Locally passed; rerun in Actions** | `tools/safety-audit.py` |
+| TuringProbe 0.1.1 Xcode build | **Not yet run** | GitHub Actions required |
+| 0.1.1 command before/after invariant | **Not yet hardware tested** | both values must remain `3` |
+| 0.1.1 complete ReBAR decode | **Not yet hardware tested** | expected three entries |
+| BAR0 read-only MMIO | **Planned, not implemented** | separate 0.2 branch and whitelist review |
+| PCI/MMIO writes | **Forbidden** | no approval |
+| Copy Engine / DMA / channels | **Research only** | no implementation |
+| Vulkan/NVK | **Long-term research** | no implementation |
+| WindowServer/Metal | **Very low feasibility** | private stack reverse engineering |

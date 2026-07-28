@@ -141,12 +141,5 @@
     "power_state_changes": false,
     "user_client": false
   },
-  "next_gate": "Build and real-hardware acceptance test of TuringProbe 0.1.1",
-  "analysis_date": "2026-07-29",
-  "inputs": {
-    "PC-DATA-20260723-121802(1).zip": "f0cce8af98c55871c9db6b3216e1aa8e83ef3d6a7542ab99b4c09c562416fd6a",
-    "EFI_STABLE.zip": "3539c4d40009a52df0d08ec15c060e005ca770cd66649180e16e68da529bdfe9",
-    "TU116(3).rom": "4ea82dadeda06b347c0eca76d4bf41f0dc56e7a402452b00cb8c72b38b2e40b4",
-    "TuringProbe-v0.1-logs.zip": "25dcb455f4727a331a83ee5bce5c26735b0c6e5c4059fd4c61bc844709c2fa20"
-  }
+  "next_gate": "Build and real-hardware acceptance test of TuringProbe 0.1.1"
 }

@@ -1,41 +1,41 @@
-# PCI BAR and capability status before the first macOS probe
+# Verified PCI BAR and capability state
 
-## BARs
+The values below were captured on the target GTX 1660 Ti by TuringProbe 0.1.0
+on macOS 15.7.7. They are runtime evidence, not inferred defaults.
 
-No trustworthy raw PCI configuration dump with assigned BAR bases and lengths
-was present in PC-DATA. Windows exposed only the aggregate `BarTypes` value
-`0x00020101`. Therefore no BAR address or length is guessed here.
+## BARs and assigned resources
 
-| Resource | Offline status | v0.1 live property |
-|---|---|---|
-| BAR0 | Base/length unknown | `TPBAR0Raw`, entry 0 in `TPBARDescriptors` |
-| BAR1 | Base/length unknown | `TPBAR1Raw`, entry 1 in `TPBARDescriptors` |
-| BAR2 | Base/length unknown | `TPBAR2Raw`, entry 2 in `TPBARDescriptors` |
-| BAR3 | Base/length unknown | `TPBAR3Raw`, entry 3 in `TPBARDescriptors` |
-| BAR4 | Base/length unknown | `TPBAR4Raw`, entry 4 in `TPBARDescriptors` |
-| BAR5 | Base/length unknown | `TPBAR5Raw`, entry 5 in `TPBARDescriptors` |
-| Expansion ROM BAR | Raw value unknown | `TPExpansionRomBARRaw` |
-| Allocated ranges | Unknown | `TPMemoryRanges` and descriptor lengths |
+| Resource | Assigned base | Length | Type |
+|---|---:|---:|---|
+| BAR0 | `0x80000000` | 16 MiB | 32-bit non-prefetchable MMIO |
+| BAR1/2 | `0x4000000000` | 256 MiB | 64-bit prefetchable |
+| BAR3/4 | `0x4010000000` | 32 MiB | 64-bit prefetchable |
+| BAR5 | `0x5000` | 128 B | I/O space |
+| Expansion ROM | `0x81000000` | 512 KiB | ROM aperture |
 
-The implementation does not size a BAR by writing all ones. It reads assigned
-config values and asks `IOPCIDevice` for already-published memory descriptors;
-it never maps or dereferences them.
+No BAR is mapped or dereferenced by 0.1.x. BAR sizes are taken from existing
+`IODeviceMemory` descriptors; the code never probes sizes by writing all ones.
 
-## Capabilities
+## Conventional capabilities
 
-| Capability / property | PC-DATA observation | Exact offset/live state |
-|---|---|---|
-| PCI Express capability | ExpressSpecVersion raw enum 2 | Pending live probe |
-| Current link | speed enum 1, width x16 in captured Windows state | Pending live probe |
-| Maximum link | speed enum 3, width x16 | Pending live probe |
-| MSI | maximum messages 1 | Offset and enabled state pending |
-| MSI-X | Not proven by PC-DATA | Pending live probe |
-| Power Management | Expected for PCIe endpoint but not proven from raw dump | Pending live probe |
-| AER | Windows reports present | Extended-cap offset pending |
-| Resizable BAR | BIOS setting disabled; capability presence not proven | `TPResizableBARPresent` pending |
-| ACS | Windows raw support enum 2 | Extended-cap offset pending |
-| ARI | Windows reports false | Confirm with extended-cap walk |
-| ATS | Windows reports false | Confirm with extended-cap walk |
-| Atomic Ops | Windows reports false | Confirm with capability fields |
+| Offset | ID | Name | Key state |
+|---:|---:|---|---|
+| `0x60` | `0x01` | Power Management | PMCSR observed read-only |
+| `0x68` | `0x05` | MSI | 64-bit capable, disabled |
+| `0x78` | `0x10` | PCI Express | max Gen3 x16, observed idle encoding 1 x16 |
 
-The first live capture is the acceptance evidence for all values marked pending.
+## Extended capabilities
+
+| Offset | ID | Name |
+|---:|---:|---|
+| `0x100` | `0x0002` | Virtual Channel |
+| `0x250` | `0x0018` | Latency Tolerance Reporting |
+| `0x258` | `0x001E` | L1 PM Substates |
+| `0x128` | `0x0004` | Power Budgeting |
+| `0x420` | `0x0001` | Advanced Error Reporting |
+| `0x600` | `0x000B` | Vendor-Specific Extended Capability |
+| `0x900` | `0x0019` | Secondary PCI Express |
+| `0xBB0` | `0x0015` | Resizable BAR |
+
+0.1.1 adds bounded decoding of every ReBAR entry advertised by the count field.
+It reads capability and control registers but never writes the selected size.

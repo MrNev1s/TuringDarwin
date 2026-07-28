@@ -40,7 +40,7 @@ void publishBarAndMemoryDescriptors(IOPCIDevice *device, IOService *owner) {
             if (entry == nullptr) continue;
             dictionaryNumber(entry, "Index", index, 8);
             dictionaryNumber(entry, "RegisterOffset", registerOffset, 16);
-            dictionaryNumber(entry, "Raw", raw, 32);
+            dictionaryNumber(entry, "Raw", static_cast<UInt64>(raw), 64);
 
             if (continuationOf64BitBar) {
                 dictionaryBoolean(entry, "ContinuationOfPrevious64BitBAR", true);
@@ -72,7 +72,7 @@ void publishBarAndMemoryDescriptors(IOPCIDevice *device, IOService *owner) {
                     assignedBase = static_cast<UInt64>(raw & ~0xFU);
                     if (is64Bit) {
                         const UInt32 high = device->configRead32(registerOffset + 4U);
-                        dictionaryNumber(entry, "AssignedBaseHigh", high, 32);
+                        dictionaryNumber(entry, "AssignedBaseHigh", static_cast<UInt64>(high), 64);
                         assignedBase |= static_cast<UInt64>(high) << 32U;
                         continuationOf64BitBar = true;
                     }

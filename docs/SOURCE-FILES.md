@@ -1,29 +1,34 @@
-# Exact source and support file list for v0.1
+# Exact source and support file list for v0.1.1
+
+## Canonical state
+
+- `PROJECT_STATE.md` — authoritative human-readable hand-off.
+- `PROJECT_STATE.json` — machine-readable project state.
+- `EVIDENCE.json` — evidence and input hashes.
 
 ## Kernel target
 
 - `kext/TuringProbe/Info.plist` — exact PCI personality and bundle metadata.
 - `kext/TuringProbe/TuringProbe.hpp` — service declaration.
-- `kext/TuringProbe/TuringProbe.cpp` — boot-argument gates, exact target gate,
-  lifecycle, bounded publication and service registration.
-- `kext/TuringProbe/PCIConfig.hpp` — PCI offsets and read-only API surface.
-- `kext/TuringProbe/PCIConfig.cpp` — identity, fixed header fields, 256-byte
-  conventional configuration snapshot and IORegistry paths.
-- `kext/TuringProbe/CapabilityParser.hpp` — capability parser interface.
-- `kext/TuringProbe/CapabilityParser.cpp` — bounded conventional and extended
-  capability walks; PM/MSI/MSI-X/PCIe/RBAR decoding.
-- `kext/TuringProbe/BARInspector.hpp` — BAR/resource inspector interface.
-- `kext/TuringProbe/BARInspector.cpp` — assigned BAR decoding and existing
-  `IODeviceMemory` descriptor metadata without mapping.
+- `kext/TuringProbe/TuringProbe.cpp` — fail-closed boot gates, exact target
+  gate, lifecycle, command-register invariant, publication and registration.
+- `kext/TuringProbe/PCIConfig.hpp/.cpp` — PCI offsets, identity, fixed header
+  fields, 256-byte conventional snapshot and registry paths.
+- `kext/TuringProbe/CapabilityParser.hpp/.cpp` — bounded conventional and
+  extended capability walks, human-readable names, PM/MSI/MSI-X/PCIe and full
+  ReBAR read-only decoding.
+- `kext/TuringProbe/BARInspector.hpp/.cpp` — assigned BAR decoding and existing
+  `IODeviceMemory` metadata without mapping.
 - `kext/TuringProbe/Logging.hpp` — bounded log prefix.
 - `include/TuringDeviceIds.hpp` — exact primary and subsystem IDs.
 - `include/TuringTypes.hpp` — fixed-width PCI identity type.
 - `include/TuringRegisters.hpp` — intentionally empty; no MMIO whitelist exists
-  in v0.1.
+  in 0.1.1.
 
 ## Build and validation
 
 - `TuringProbe.xcodeproj/project.pbxproj`
+- `.github/workflows/build-kext.yml`
 - `MacKernelSDK.lock.example`
 - `tools/bootstrap-sdk.sh`
 - `tools/build.sh`
@@ -34,9 +39,7 @@
 - `tools/verify-rom.py`
 - `tools/parse-edid.py`
 
-## Documentation and evidence
+## Documentation
 
-- `README.md`, `LICENSE`, `EVIDENCE.json`, `SHA256SUMS.txt`
-- every file under `docs/`
-- parser and ROM test placeholders under `tests/`
-- research boundary notes under `research/`
+- all files under `docs/`, especially `PROJECT_STATE.md`,
+  `MMIO-READ-PLAN.md`, `SAFETY.md`, `TESTING.md`, and `RESULT-MATRIX.md`.

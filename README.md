@@ -1,43 +1,40 @@
-# TuringDarwin / TuringProbe 0.1.0
+# TuringDarwin / TuringProbe 0.1.1
 
-`TuringProbe.kext` is the first, deliberately read-only diagnostic component
-for one specific board:
+TuringProbe is the deliberately read-only diagnostic component for the exact
+ASUS TU116 board `10DE:2182 / 1043:8854`.
 
-- NVIDIA vendor/device: `10DE:2182`
-- ASUS subsystem: `1043:8854`
-- PCI personality uses both `IOPCIPrimaryMatch` and `IOPCISecondaryMatch`,
-  followed by an exact in-code identity gate
-- Board family: ASUS TUF Gaming GeForce GTX 1660 Ti EVO TOP / TU116
+## Verified baseline
 
-## Scope
+Version 0.1.0 was built with Xcode 16.2 / macOS SDK 15.2, injected by OpenCore,
+and successfully attached to the target GPU on macOS 15.7.7. The system reached
+the desktop, the GOP/IONDRV framebuffer remained active, and the PCI Command
+Register showed bus mastering disabled.
 
-Version 0.1 reads PCI configuration space and publishes a structured snapshot
-in IORegistry. It does not map BAR memory, access GPU MMIO, enable bus mastering,
-submit commands, create DMA mappings, install interrupt handlers, load firmware,
-or alter PCI power state.
+Read [`PROJECT_STATE.md`](PROJECT_STATE.md) first. It is the canonical project
+hand-off and contains the verified BARs, PCI capability chain, hashes, safety
+contract, and current acceptance gates.
 
-The service is fail-closed:
+## 0.1.1 scope
 
-- `-tdprobe` is required to attach.
-- `-tdoff` prevents attachment.
-- `-tdmmio-read` and `-tdunsafe` are rejected by this version.
+0.1.1 remains PCI-configuration read-only. It adds unsigned raw-value
+publication, named capabilities, bounded full ReBAR decoding, and before/after
+Command Register evidence. It still does not map BAR memory, access MMIO,
+enable bus mastering, submit DMA, install interrupts, load firmware, change
+power state, or create an IOUserClient.
 
-## Verification status
+Fail-closed boot controls:
 
-- Supplied PC-DATA, stable EFI and VBIOS were inspected offline.
-- The source passed the included static safety audit and plist parsing checks.
-- This package was generated on Linux, so it has **not** been compiled by Xcode,
-  loaded on the target Mac, or validated against a live IORegistry dump.
-- A build is not considered valid until `tools/build.sh` succeeds on the target
-  macOS installation and the resulting build manifest is retained.
+- `-tdprobe` is required;
+- `-tdoff` disables attachment;
+- `-tdmmio-read` and `-tdunsafe` are rejected.
 
-Read `docs/SAFETY.md`, `docs/BUILD.md`, `docs/EFI-INSTALL.md`,
-`docs/PCI-CAPABILITIES.md`, `docs/RESULT-MATRIX.md`, and `docs/TESTING.md`
-before using it.
+## Build
 
-## GitHub Actions build
+The GitHub Actions workflow uses Xcode 16.2, macOS SDK 15.2, x86_64, and pins
+MacKernelSDK to the commit proven by the successful 0.1.0 build:
 
-The repository includes `.github/workflows/build-kext.yml`. It builds the
-x86_64 diagnostic kext on a GitHub-hosted macOS runner, runs the read-only
-safety audit, records the resolved MacKernelSDK commit, and uploads a ZIP
-artifact. See [`docs/GITHUB-ACTIONS.md`](docs/GITHUB-ACTIONS.md).
+`05094e5e88cec7caedbfb35e8449ed0db94bf95b`
+
+Run **Build TuringProbe kext** with configuration `Debug`. The 0.1.1 source is
+not considered built or hardware-verified until that workflow and the
+subsequent controlled boot both pass.
