@@ -1,8 +1,8 @@
 {
-  "schema_version": 4,
+  "schema_version": 7,
   "updated": "2026-07-29",
   "repository": "MrNev1s/TuringDarwin",
-  "verified_runtime_version": "0.1.1",
+  "verified_runtime_version": "0.2.1-mmio-read-only",
   "development_version": "0.2.1",
   "target": {
     "bdf": "01:00.0",
@@ -22,7 +22,45 @@
     "gop_framebuffer_preserved": true,
     "resolution": "1920x1080",
     "command_register": 3,
-    "bus_master_enabled": false
+    "bus_master_enabled": false,
+    "kext_version": "0.2.1",
+    "kext_uuid": "66D01C7F-5AD6-3EB7-8D98-B839F0733E99",
+    "boot_mode": "-tdprobe -tdmmio-read",
+    "mmio_access": true,
+    "pci_only_0_2_1_pass": true,
+    "pci_only_log_zip_sha256": "b6ad39324a6c75953fb4bff164545c01c1129fdacf2115a8c133fd9135d4d559",
+    "mmio_writes": false,
+    "bar0_mapping_created": true,
+    "bar0_mapping_read_only_requested": true,
+    "bar0_mapping_released": true,
+    "bar0_mapping_retained_after_probe": false,
+    "bar0_mapping_length": 16777216,
+    "mmio_read_count": 3,
+    "mmio_read_completed": true,
+    "mmio_log_zip_sha256": "bc72ea4378681f929a25cbe503a1a73443ca091df0f58b43d489090570cfabe4",
+    "registers": {
+      "NV_PMC_BOOT_1_0x000004": "0x00000000",
+      "NV_PMC_BOOT_0_0x000000": "0x168000A1",
+      "NV_PEXTDEV_BOOT_0_STRAP_0x101000": "0x00400080"
+    },
+    "decoded_identity": {
+      "chipset": "0x168",
+      "chipset_name": "TU116",
+      "revision": "0xA1",
+      "vgpu_bits": 0,
+      "crystal_select": "0x00400000",
+      "crystal_khz": 27000,
+      "crystal_decode_valid": true
+    },
+    "command_before_bar0_map": 3,
+    "command_after_bar0_map": 3,
+    "command_after_mmio_reads": 3,
+    "command_after_probe": 3,
+    "command_unchanged_across_mmio": true,
+    "bus_master_before_bar0_map": false,
+    "bus_master_after_bar0_map": false,
+    "bus_master_after_mmio_reads": false,
+    "bus_master_after_probe": false
   },
   "bars": [
     {
@@ -154,10 +192,10 @@
       "user_client": false
     }
   },
-  "next_gate": "GitHub Actions build and binary audit of TuringProbe 0.2.1; no EFI change before PASS",
-  "current_stage": "TuringProbe 0.2.0 artifact rejected before boot due unreleased IOMemoryMap; 0.2.1 explicit-release source implemented",
-  "candidate_version": "0.2.1",
-  "candidate_status": "source-fixed-after-0.2.0-artifact-rejection-not-built-not-booted",
+  "next_gate": "Build 0.3.0 in GitHub Actions, audit Mach-O, then perform PCI-only compatibility boot",
+  "current_stage": "TuringProbe 0.3.0 bounded PTOP inventory source implemented; awaiting Xcode build and binary audit",
+  "candidate_version": "0.3.0",
+  "candidate_status": "source-implemented-local-audit-pass-not-built-not-hardware-authorized",
   "candidate_mmio": {
     "bar": 0,
     "mapping": "kIOMapReadOnly, explicit IOMemoryMap pointer, mandatory release and nullptr clear",
@@ -192,7 +230,7 @@
     "firmware": false,
     "power_changes": false,
     "user_client": false,
-    "status": "source-fixed-not-built-not-booted",
+    "status": "hardware-verified-pass",
     "read_count": 3,
     "pci_command_invariant_required": true,
     "bus_master_must_remain_disabled": true,
@@ -200,7 +238,12 @@
       "implicit_osptr_lifetime_allowed": false,
       "explicit_release_required": true,
       "pointer_clear_required": true
-    }
+    },
+    "attempt_limit": 1,
+    "retry_after_failure": false,
+    "hardware_boot_completed": true,
+    "additional_offsets_authorized": false,
+    "writes_authorized": false
   },
   "rejected_artifacts": [
     {
@@ -213,5 +256,43 @@
       "macho_uuid": "B944891C-88CB-37E8-8171-842AA1F47D81",
       "source_commit": "89b752805cc87032e9b7dc8cb3c990ac4fb66f2b"
     }
-  ]
+  ],
+  "candidate_artifact": {
+    "version": "0.2.1",
+    "source_commit": "76060d350cc1b58069f6138c5df517857e511059",
+    "build_result": "success",
+    "xcode": "16.2",
+    "sdk": "15.2",
+    "mac_kernel_sdk_commit": "05094e5e88cec7caedbfb35e8449ed0db94bf95b",
+    "architecture": "x86_64",
+    "macho_uuid": "66D01C7F-5AD6-3EB7-8D98-B839F0733E99",
+    "outer_zip_sha256": "123cc915fa6be6dd002128fbc9fe74197d08e9a5838b436b2987aff9c59e095a",
+    "kext_zip_sha256": "a409b524bc4100e77e4c3ee2cd9bff23e8a5336ef8a990df9755238c89515938",
+    "binary_sha256": "306faf22895d2abc80f11ec1cdc29e22f96185f9a0bb25fb2e9af2ea74938c44",
+    "info_plist_sha256": "6c5b511b1998425337ddf876e5844db24e7122b6bdda27a917e6a36e822d7270",
+    "binary_audit": "pass",
+    "mapping_release_confirmed": true,
+    "hardware_booted": true,
+    "authorized_boot_mode": "-tdprobe -tdmmio-read (one controlled boot)",
+    "blocked_boot_mode": "-tdunsafe or any unreviewed mode",
+    "hardware_boot_mode_verified": "-tdprobe"
+  },
+  "candidate_top_inventory": {
+    "boot_arg": "-tdtop-read",
+    "requires": [
+      "-tdprobe",
+      "-tdmmio-read"
+    ],
+    "bar0_base_offset": "0x022700",
+    "word_count": 64,
+    "byte_length": 256,
+    "expanded_total_mmio_reads": 67,
+    "source_model": "Linux Nouveau gk104_top_parse",
+    "source_implemented": true,
+    "local_audit_pass": true,
+    "xcode_built": false,
+    "binary_audited": false,
+    "hardware_authorized": false,
+    "writes_authorized": false
+  }
 }

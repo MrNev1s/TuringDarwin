@@ -116,11 +116,25 @@ third-party C++14 build. `TPBAR0MappingReleased` would therefore have reported a
 false success. Artifact hashes and details are recorded in
 `docs/ARTIFACT-REVIEW-0.2.0-REJECTED.md`. No hardware boot was performed.
 
-### 0.2.1 source candidate
+### 0.2.1 compiled artifact
 
-**[SOURCE IMPLEMENTED, NOT BUILT]**
+**[OFFLINE VERIFIED + REAL-HW VERIFIED IN PCI-ONLY MODE]**
 
-Version 0.2.1 preserves the same fail-closed BAR0 gate and exact whitelist:
+GitHub Actions build provenance:
+
+- source commit `76060d350cc1b58069f6138c5df517857e511059`;
+- Xcode 16.2, SDK 15.2, x86_64;
+- MacKernelSDK `05094e5e88cec7caedbfb35e8449ed0db94bf95b`;
+- `BUILD SUCCEEDED`;
+- Mach-O UUID `66D01C7F-5AD6-3EB7-8D98-B839F0733E99`;
+- outer artifact SHA-256 `123cc915fa6be6dd002128fbc9fe74197d08e9a5838b436b2987aff9c59e095a`;
+- inner kext ZIP SHA-256 `a409b524bc4100e77e4c3ee2cd9bff23e8a5336ef8a990df9755238c89515938`;
+- executable SHA-256 `306faf22895d2abc80f11ec1cdc29e22f96185f9a0bb25fb2e9af2ea74938c44`;
+- built `Info.plist` SHA-256 `6c5b511b1998425337ddf876e5844db24e7122b6bdda27a917e6a36e822d7270`.
+
+Binary audit result: **PASS**.
+
+The artifact preserves the exact BAR0 whitelist:
 
 | Order | Offset | Register | Validation |
 |---:|---:|---|---|
@@ -128,16 +142,51 @@ Version 0.2.1 preserves the same fail-closed BAR0 gate and exact whitelist:
 | 2 | `0x000000` | `NV_PMC_BOOT_0` | require chipset `0x168`, publish revision |
 | 3 | `0x101000` | `NV_PEXTDEV_BOOT_0_STRAP` | decode known crystal straps |
 
-Ownership correction:
+Disassembly confirms:
 
-- explicit `IOMemoryMap *mapping`;
-- `mapping->release()` exactly once after every successful `map()` path;
-- pointer cleared to `nullptr`;
-- actual `mappingReleased` telemetry;
-- source audits require the release and reject implicit `OSPtr` lifetime.
+- one BAR0 descriptor mapping request with option `0x1000`, correlated with
+  `kIOMapReadOnly`;
+- exactly three calls to the checked MMIO read accessor;
+- one explicit virtual `IOMemoryMap::release()` call after every successful-map
+  branch;
+- mapping pointer clear immediately after release;
+- no direct call sites for PCI/MMIO writes, DMA, interrupt setup, firmware,
+  power mutation, or user-client creation.
 
-No claim of Xcode compilation, binary correctness, or hardware success is made
-for 0.2.1 yet.
+The mandatory PCI-only compatibility boot has now passed on real hardware:
+
+- version `0.2.1`, UUID `66D01C7F-5AD6-3EB7-8D98-B839F0733E99`;
+- service registered, matched, active;
+- `TuringProbeBootMode = -tdprobe`;
+- PCI Command `0x0003` before and after;
+- Bus Master disabled before and after;
+- `TuringProbeMMIOAccess = No`;
+- GOP output remained 1920×1080 ARGB8888;
+- collected runtime ZIP SHA-256
+  `b6ad39324a6c75953fb4bff164545c01c1129fdacf2115a8c133fd9135d4d559`.
+
+The first controlled BAR0 read-only hardware boot has now passed:
+
+- boot mode `-tdprobe -tdmmio-read`;
+- BAR0 mapping base `0x80000000`, length 16 MiB;
+- `kIOMapReadOnly` requested;
+- mapping created and explicitly released;
+- mapping not retained after probe;
+- exactly three whitelisted reads completed;
+- `NV_PMC_BOOT_1 = 0x00000000`;
+- `NV_PMC_BOOT_0 = 0x168000A1`;
+- chipset decoded as TU116 `0x168`, revision `0xA1`;
+- `NV_PEXTDEV_BOOT_0_STRAP = 0x00400080`;
+- crystal decoded as 27 MHz;
+- PCI Command remained `0x0003` before mapping, after mapping, after reads,
+  and after the complete probe;
+- Bus Master remained disabled throughout;
+- GOP output remained 1920x1080 ARGB8888;
+- collected MMIO runtime ZIP SHA-256
+  `bc72ea4378681f929a25cbe503a1a73443ca091df0f58b43d489090570cfabe4`.
+
+This closes the initial three-register BAR0 identification milestone.
+No additional register offsets and no write path are authorised.
 
 ## 8. Non-negotiable prohibition list
 
@@ -147,10 +196,48 @@ change, full BAR dump, IOUserClient, workloop, or command gate is authorised.
 
 ## 9. Next gate
 
-1. Build 0.2.1 in GitHub Actions with the pinned toolchain.
-2. Upload the complete artifact for binary/import/disassembly audit.
-3. Prepare a separate test-EFI package only after that audit.
-4. Boot PCI-only mode first (`-tdprobe`).
-5. Only after PCI-only PASS, boot BAR0 mode (`-tdprobe -tdmmio-read`).
+**[DESIGN REVIEW REQUIRED; NOT YET AUTHORISED FOR HARDWARE]**
 
-A successful BAR0 read does not authorise adding offsets or implementing writes.
+The initial BAR0 identification milestone is complete. The next stage must be a
+new source-backed read-only inventory design with a separately reviewed,
+minimal whitelist. Before any new hardware boot it must:
+
+1. justify every additional register from primary Nouveau, NVIDIA open-kernel,
+   or envytools documentation;
+2. exclude registers with read-to-clear, acknowledge, FIFO-pop, indexed-window,
+   or other possible read side effects;
+3. retain `kIOMapReadOnly`, one-shot reads, explicit mapping release, exact
+   device/subsystem matching, and unchanged PCI Command/Bus Master checks;
+4. contain no PCI/MMIO writes, polling, DMA, interrupts, firmware, reset,
+   power/clock/fan/voltage control, channels, FIFO, Copy Engine, display
+   programming, or IOUserClient;
+5. pass source audit, Xcode build, Mach-O call-site audit, and a PCI-only
+   compatibility boot before any expanded MMIO run.
+
+Return the test EFI to `-tdprobe` only while this next design is prepared.
+
+
+## 10. TuringProbe 0.3.0 candidate
+
+**[SOURCE IMPLEMENTED + LOCAL AUDIT PASS; NOT XCODE-BUILT; NOT HARDWARE-AUTHORISED]**
+
+The candidate preserves all 0.2.1 identity reads and adds an optional bounded
+PTOP inventory selected by `-tdtop-read`. TU116 uses Nouveau's
+`gk104_top_parse`, which reads exactly 64 dwords at `0x022700..0x0227fc`.
+Expanded mode therefore contains exactly 67 MMIO reads: 3 identity + 64 TOP.
+
+Safety properties:
+
+- one `kIOMapReadOnly` BAR0 mapping;
+- explicit `IOMemoryMap::release()`;
+- fixed compile-time table base and count;
+- one finite 64-iteration loop, no polling;
+- no PCI/MMIO writes, DMA, interrupts, firmware, reset, power/clock/fan/voltage
+  control, FIFO/channels/Copy Engine commands, display programming or user
+  client;
+- `-tdtop-read` fails closed unless `-tdmmio-read` is also present;
+- `-tdunsafe` remains rejected.
+
+Next gate: GitHub Actions build and Mach-O call-site audit. The first hardware
+boot of the built 0.3.0 artifact must be PCI-only; expanded TOP MMIO remains
+blocked until that compatibility boot passes.

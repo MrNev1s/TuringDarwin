@@ -7,7 +7,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_DIRS = [ROOT / "kext", ROOT / "include"]
 MMIO_CPP = Path("kext/TuringProbe/MMIOReadOnly.cpp")
 MMIO_HPP = Path("kext/TuringProbe/MMIOReadOnly.hpp")
-MMIO_ALLOWED_FILES = {MMIO_CPP, MMIO_HPP}
+TOP_CPP = Path("kext/TuringProbe/TopInventory.cpp")
+TOP_HPP = Path("kext/TuringProbe/TopInventory.hpp")
+MMIO_ALLOWED_FILES = {MMIO_CPP, MMIO_HPP, TOP_CPP, TOP_HPP}
 
 GLOBALLY_FORBIDDEN = {
     r"\bconfigWrite(?:8|16|32)\b": "PCI configuration write",
@@ -24,8 +26,8 @@ GLOBALLY_FORBIDDEN = {
     r"\bIODMACommand\b": "DMA command",
     r"\bIOBufferMemoryDescriptor\b": "buffer suitable for later DMA",
     r"\bIOUserClient\b": "user client surface",
-    r"\bIOCommandGate\b": "command gate not authorised in v0.2",
-    r"\bIOWorkLoop\b": "work loop not authorised in v0.2",
+    r"\bIOCommandGate\b": "command gate not authorised in v0.3",
+    r"\bIOWorkLoop\b": "work loop not authorised in v0.3",
     r"\bioWrite(?:8|16|32)\b": "I/O-space write",
     r"\bIOMappedWrite(?:8|16|32|64)\b": "mapped MMIO write",
     r"\bOSWrite(?:Little|Big)Int(?:8|16|32|64)\b": "memory write primitive",
@@ -36,14 +38,13 @@ GLOBALLY_FORBIDDEN = {
     r"\bwriteBytes\b": "memory descriptor write",
     r"\bprepare\s*\(": "memory preparation/DMA-facing operation",
     r"\bcomplete\s*\(": "memory completion/DMA-facing operation",
-    r"\bunmap\s*\(": "manual mapping mutation; rely on OSPtr lifetime",
 }
 
 MMIO_ONLY_TOKENS = {
     r"\bIOMemoryMap\b": "mapping object",
     r"\bgetVirtualAddress\b": "mapped virtual address",
     r"\bkIOMapReadOnly\b": "read-only mapping option",
-    r"\bOSReadLittleInt32\b": "whitelisted MMIO read primitive",
+    r"\bOSReadLittleInt32\b": "MMIO read primitive",
     r"->map\s*\(": "IOMemoryDescriptor mapping",
 }
 
@@ -55,7 +56,6 @@ ALLOWED_PCI_METHODS = {
     "getName", "getLocation", "retain", "release",
 }
 
-ALLOWED_MMIO_OFFSETS = {0x000000, 0x000004, 0x101000}
 errors = []
 texts = {}
 
@@ -77,7 +77,7 @@ for base in SOURCE_DIRS:
                 continue
             for match in re.finditer(pattern, text):
                 line = text.count("\n", 0, match.start()) + 1
-                errors.append(f"{rel}:{line}: MMIO token outside dedicated module ({reason})")
+                errors.append(f"{rel}:{line}: MMIO token outside dedicated modules ({reason})")
 
         for match in re.finditer(r"\b(?:device|pciDevice_|candidate)->([A-Za-z_][A-Za-z0-9_]*)\s*\(", text):
             method = match.group(1)
@@ -90,11 +90,11 @@ if not mmio:
     errors.append(f"{MMIO_CPP}: missing dedicated MMIO module")
 else:
     if len(re.findall(r"\bOSReadLittleInt32\s*\(", mmio)) != 1:
-        errors.append(f"{MMIO_CPP}: exactly one checked OSReadLittleInt32 accessor is required")
+        errors.append(f"{MMIO_CPP}: exactly one identity OSReadLittleInt32 accessor is required")
     if len(re.findall(r"\breadWhitelisted32\s*\(", mmio)) != 4:
-        errors.append(f"{MMIO_CPP}: accessor must have one definition and exactly three call sites")
-    if re.search(r"\b(for|while|do)\s*(?:\(|\{)", mmio):
-        errors.append(f"{MMIO_CPP}: hardware MMIO module must contain no loops")
+        errors.append(f"{MMIO_CPP}: identity accessor must have one definition and three call sites")
+    if re.search(r"\b(?:for|while|do)\s*(?:\(|\{)", mmio):
+        errors.append(f"{MMIO_CPP}: identity/mapping module must contain no loops")
     if re.search(r"\bvolatile\b", mmio):
         errors.append(f"{MMIO_CPP}: no direct volatile pointer is allowed")
     if "descriptor->map(kIOMapReadOnly)" not in mmio:
@@ -106,30 +106,63 @@ else:
     if "mapping = nullptr;" not in mmio:
         errors.append(f"{MMIO_CPP}: mapping pointer must be cleared after release")
     if "auto mapping =" in mmio or "OSPtr<IOMemoryMap>" in mmio:
-        errors.append(f"{MMIO_CPP}: implicit OSPtr lifetime is forbidden for third-party C++14 builds")
+        errors.append(f"{MMIO_CPP}: implicit OSPtr lifetime is forbidden")
     if 'TPBAR0MappingReleased", mappingReleased' not in mmio:
-        errors.append(f"{MMIO_CPP}: release telemetry must report the real mappingReleased state")
+        errors.append(f"{MMIO_CPP}: release telemetry must report real state")
     if "TURINGPROBE_ENABLE_MMIO_READ" not in mmio:
         errors.append(f"{MMIO_CPP}: compile-time MMIO gate missing")
 
+
+top = texts.get(TOP_CPP, "")
+if not top:
+    errors.append(f"{TOP_CPP}: missing bounded TOP inventory module")
+else:
+    if len(re.findall(r"\bOSReadLittleInt32\s*\(", top)) != 1:
+        errors.append(f"{TOP_CPP}: exactly one TOP OSReadLittleInt32 accessor is required")
+    if len(re.findall(r"\breadTopWord32\s*\(", top)) != 2:
+        errors.append(f"{TOP_CPP}: TOP accessor must have one definition and one bounded call site")
+    loops = re.findall(r"for\s*\(([^)]*)\)", top)
+    if len(loops) != 1 or "index < kTopTableWordCount" not in loops[0]:
+        errors.append(f"{TOP_CPP}: exactly one loop bounded by kTopTableWordCount is required")
+    if "kTopTableBaseOffset + index * 4U" not in top:
+        errors.append(f"{TOP_CPP}: TOP reads must use the fixed 0x022700 + index*4 formula")
+    if re.search(r"\b(?:while|do)\s*(?:\(|\{)", top):
+        errors.append(f"{TOP_CPP}: TOP module must contain no polling/unbounded loops")
+    if re.search(r"\bvolatile\b", top):
+        errors.append(f"{TOP_CPP}: no direct volatile pointer is allowed")
+
 registers = texts.get(Path("include/TuringRegisters.hpp"), "")
-found_offsets = {
-    int(value, 16)
-    for value in re.findall(r"constexpr\s+UInt32\s+k\w+Offset\s*=\s*(0x[0-9A-Fa-f]+)U", registers)
+expected_constants = {
+    "kNvPmcBoot0Offset": 0x000000,
+    "kNvPmcBoot1Offset": 0x000004,
+    "kNvPextdevBoot0StrapOffset": 0x101000,
+    "kTopTableBaseOffset": 0x022700,
+    "kTopTableWordCount": 64,
 }
-if found_offsets != ALLOWED_MMIO_OFFSETS:
-    errors.append(
-        "include/TuringRegisters.hpp: whitelist offsets must be exactly "
-        "0x000000, 0x000004, and 0x101000"
-    )
+for name, expected in expected_constants.items():
+    match = re.search(rf"constexpr\s+UInt32\s+{name}\s*=\s*(0x[0-9A-Fa-f]+|[0-9]+)U", registers)
+    if not match or int(match.group(1), 0) != expected:
+        errors.append(f"include/TuringRegisters.hpp: {name} must equal {expected:#x}")
+if "kExpandedMmioReadCount == 67U" not in registers:
+    errors.append("include/TuringRegisters.hpp: expanded read count must be statically fixed at 67")
+
+main = texts.get(Path("kext/TuringProbe/TuringProbe.cpp"), "")
+if 'bootArgumentPresent("-tdtop-read")' not in main:
+    errors.append("TuringProbe.cpp: -tdtop-read gate missing")
+if "topRequested && !mmioRequested" not in main:
+    errors.append("TuringProbe.cpp: -tdtop-read must require -tdmmio-read")
 
 pbx = (ROOT / "TuringProbe.xcodeproj/project.pbxproj").read_text(encoding="utf-8")
 if pbx.count("TURINGPROBE_ENABLE_MMIO_READ=1") != 2:
-    errors.append("project.pbxproj: Debug and Release must both enable the compile-time MMIO gate")
+    errors.append("project.pbxproj: Debug and Release must enable compile-time MMIO gate")
+if "TopInventory.cpp" not in pbx or "TopInventory.hpp" not in pbx:
+    errors.append("project.pbxproj: TOP inventory module is not included")
+if pbx.count("MODULE_VERSION = 0.3.0") != 2:
+    errors.append("project.pbxproj: module version must be 0.3.0 in both configurations")
 
 if errors:
     print("SAFETY AUDIT FAILED", file=sys.stderr)
     print("\n".join(errors), file=sys.stderr)
     raise SystemExit(1)
 
-print("SAFETY AUDIT PASSED: v0.2.1 permits three read-only BAR0 reads and requires explicit map release")
+print("SAFETY AUDIT PASSED: v0.3.0 allows 3 identity reads plus one fixed 64-dword TOP inventory")

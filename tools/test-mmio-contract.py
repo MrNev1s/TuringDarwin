@@ -25,15 +25,16 @@ assert 'TPBAR0MappingReleased", mappingReleased' in mmio
 assert "auto mapping =" not in mmio
 assert "OSPtr<IOMemoryMap>" not in mmio
 assert mmio.count("readWhitelisted32(bar0,") == 3
+assert "performReadOnlyTopInventory(bar0, owner)" in mmio
 assert "configWrite" not in mmio
 assert "IOMappedWrite" not in mmio
 assert "OSWrite" not in mmio
-assert "-tdprobe" in main and "-tdmmio-read" in main
+assert "-tdprobe" in main and "-tdmmio-read" in main and "-tdtop-read" in main
+assert "topRequested && !mmioRequested" in main
 assert "-tdunsafe" in main
 assert pbx.count("TURINGPROBE_ENABLE_MMIO_READ=1") == 2
-assert "MODULE_VERSION = 0.2.1" in pbx
+assert pbx.count("MODULE_VERSION = 0.3.0") == 2
 
-# Validate the decode formulas against a representative TU116 BOOT0 value.
 boot0 = 0x168000A1
 chipset = (boot0 & 0x1FF00000) >> 20
 revision = boot0 & 0xFF
@@ -46,6 +47,6 @@ crystals = {
     0x00400000: 27000,
     0x00400040: 25000,
 }
-assert len(crystals) == 4
+assert crystals[0x00400000] == 27000
 
-print("MMIO CONTRACT PASSED: three fixed reads, read-only map, explicit release, TU116/strap decoders valid")
+print("MMIO CONTRACT PASSED: read-only map, explicit release, identity gate, optional bounded TOP inventory")

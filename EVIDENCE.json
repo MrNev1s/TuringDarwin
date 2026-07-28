@@ -149,7 +149,7 @@
     "TU116(3).rom": "4ea82dadeda06b347c0eca76d4bf41f0dc56e7a402452b00cb8c72b38b2e40b4",
     "TuringProbe-v0.1-logs.zip": "25dcb455f4727a331a83ee5bce5c26735b0c6e5c4059fd4c61bc844709c2fa20"
   },
-  "candidate_version": "0.2.1",
+  "candidate_version": "0.3.0",
   "candidate_status": "source-implemented-locally-audited-not-built-not-booted",
   "mmio_whitelist": [
     "0x000004",
@@ -206,5 +206,12 @@
     "firmware": false,
     "power_changes": false,
     "user_client": false
+  },
+  "top_inventory": {
+    "source": "Linux Nouveau gk104_top_parse",
+    "base": "0x022700",
+    "words": 64,
+    "reads_total_expanded": 67,
+    "status": "source-only-local-audit"
   }
 }

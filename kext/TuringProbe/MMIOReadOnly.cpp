@@ -5,6 +5,7 @@
 
 #include "Logging.hpp"
 #include "PCIConfig.hpp"
+#include "TopInventory.hpp"
 #include "../../include/TuringRegisters.hpp"
 
 #ifndef TURINGPROBE_ENABLE_MMIO_READ
@@ -42,7 +43,8 @@ bool fail(IOService *owner, const char *reason) {
 
 } // namespace
 
-bool performReadOnlyBar0Probe(IOPCIDevice *device, IOService *owner) {
+bool performReadOnlyBar0Probe(IOPCIDevice *device, IOService *owner,
+                              bool topInventoryRequested) {
 #if TURINGPROBE_ENABLE_MMIO_READ != 1
     return fail(owner, "compile-time MMIO read gate is disabled");
 #else
@@ -104,11 +106,17 @@ bool performReadOnlyBar0Probe(IOPCIDevice *device, IOService *owner) {
     UInt32 boot1 = 0U;
     UInt32 boot0 = 0U;
     UInt32 strap = 0U;
+    UInt32 vgpuBits = 0U;
+    UInt32 chipset = 0U;
+    UInt32 chipRevision = 0U;
+    UInt32 crystalSelect = 0U;
+    UInt32 crystalKHz = 0U;
     UInt16 commandAfterMap = 0U;
     UInt16 commandAfterReads = 0U;
     UInt64 mappingLength = 0U;
     bool mappingCreated = false;
     bool mappingReleased = false;
+    bool topInventoryCompleted = false;
     const char *mappingFailure = nullptr;
 
     // For third-party C++14 kexts, the IOKit transition pointer alias is raw
@@ -129,10 +137,38 @@ bool performReadOnlyBar0Probe(IOPCIDevice *device, IOService *owner) {
             commandAfterMap = device->configRead16(kPciCommandOffset);
             const void *bar0 = reinterpret_cast<const void *>(virtualAddress);
 
-            // Fixed sequence. Exactly one read per whitelisted register.
+            // Fixed identity sequence. Exactly one read per identity register.
             boot1 = readWhitelisted32(bar0, kNvPmcBoot1Offset);
             boot0 = readWhitelisted32(bar0, kNvPmcBoot0Offset);
             strap = readWhitelisted32(bar0, kNvPextdevBoot0StrapOffset);
+
+            vgpuBits = boot1 & kBoot1VgpuMask;
+            chipset = (boot0 & kBoot0ChipsetMask) >> kBoot0ChipsetShift;
+            chipRevision = boot0 & kBoot0RevisionMask;
+            crystalSelect = strap & kCrystalSelectMask;
+            crystalKHz = decodeCrystalKHz(strap);
+
+            if (boot1 == 0xFFFFFFFFU) {
+                mappingFailure = "NV_PMC_BOOT_1 returned all ones";
+            } else if (boot1 == kBoot1BigEndianValue) {
+                mappingFailure = "GPU reports big-endian MMIO; v0.3.0 will not switch it";
+            } else if (vgpuBits != 0U) {
+                mappingFailure = "NV_PMC_BOOT_1 reports a vGPU mode";
+            } else if (boot0 == 0U || boot0 == 0xFFFFFFFFU) {
+                mappingFailure = "NV_PMC_BOOT_0 returned an invalid value";
+            } else if (chipset != kTu116ChipsetId) {
+                mappingFailure = "NV_PMC_BOOT_0 does not identify TU116 chipset 0x168";
+            } else if (strap == 0xFFFFFFFFU) {
+                mappingFailure = "strap register returned all ones";
+            } else if (crystalKHz == 0U) {
+                mappingFailure = "strap crystal selection is not recognised";
+            } else if (topInventoryRequested) {
+                topInventoryCompleted = performReadOnlyTopInventory(bar0, owner);
+                if (!topInventoryCompleted) {
+                    mappingFailure = "bounded TOP device inventory did not decode safely";
+                }
+            }
+
             commandAfterReads = device->configRead16(kPciCommandOffset);
         }
 
@@ -176,50 +212,28 @@ bool performReadOnlyBar0Probe(IOPCIDevice *device, IOService *owner) {
     publishNumber(owner, "TPMMIONvPmcBoot1", static_cast<UInt64>(boot1), 64);
     publishNumber(owner, "TPMMIONvPmcBoot0", static_cast<UInt64>(boot0), 64);
     publishNumber(owner, "TPMMIONvPextdevBoot0Strap", static_cast<UInt64>(strap), 64);
-
-    if (boot1 == 0xFFFFFFFFU) {
-        return fail(owner, "NV_PMC_BOOT_1 returned all ones");
-    }
-    if (boot1 == kBoot1BigEndianValue) {
-        return fail(owner, "GPU reports big-endian MMIO; v0.2.1 will not switch it");
-    }
-
-    const UInt32 vgpuBits = boot1 & kBoot1VgpuMask;
     publishNumber(owner, "TPMMIOVgpuBits", vgpuBits, 32);
-    if (vgpuBits != 0U) {
-        return fail(owner, "NV_PMC_BOOT_1 reports a vGPU mode");
-    }
-
-    if (boot0 == 0U || boot0 == 0xFFFFFFFFU) {
-        return fail(owner, "NV_PMC_BOOT_0 returned an invalid value");
-    }
-
-    const UInt32 chipset = (boot0 & kBoot0ChipsetMask) >> kBoot0ChipsetShift;
-    const UInt32 chipRevision = boot0 & kBoot0RevisionMask;
     publishNumber(owner, "TPMMIOChipset", chipset, 16);
     publishNumber(owner, "TPMMIOChipRevision", chipRevision, 8);
     publishBoolean(owner, "TPMMIOChipsetIsTU116", chipset == kTu116ChipsetId);
-    if (chipset != kTu116ChipsetId) {
-        return fail(owner, "NV_PMC_BOOT_0 does not identify TU116 chipset 0x168");
-    }
-
-    if (strap == 0xFFFFFFFFU) {
-        return fail(owner, "strap register returned all ones");
-    }
-
-    const UInt32 crystalSelect = strap & kCrystalSelectMask;
-    const UInt32 crystalKHz = decodeCrystalKHz(strap);
     publishNumber(owner, "TPMMIOCrystalSelect", crystalSelect, 32);
     publishNumber(owner, "TPMMIOCrystalKHz", crystalKHz, 32);
     publishBoolean(owner, "TPMMIOCrystalDecodeValid", crystalKHz != 0U);
-    if (crystalKHz == 0U) {
-        return fail(owner, "strap crystal selection is not recognised");
-    }
-
-    publishNumber(owner, "TPMMIOReadCount", kMmioWhitelistReadCount, 32);
-    owner->setProperty("TPMMIOWhitelistSchemaVersion", "1");
-    owner->setProperty("TPMMIOWhitelist",
-                       "0x000004:NV_PMC_BOOT_1,0x000000:NV_PMC_BOOT_0,0x101000:NV_PEXTDEV_BOOT_0_STRAP");
+    publishBoolean(owner, "TPTopInventoryRequested", topInventoryRequested);
+    publishBoolean(owner, "TPTopInventoryCompleted", topInventoryCompleted);
+    publishNumber(owner, "TPMMIOIdentityReadCount", kIdentityMmioReadCount, 32);
+    publishNumber(owner, "TPMMIOTopReadCount",
+                  topInventoryRequested ? kTopInventoryMmioReadCount : 0U, 32);
+    publishNumber(owner, "TPMMIOReadCount",
+                  topInventoryRequested ? kExpandedMmioReadCount :
+                                          kIdentityMmioReadCount, 32);
+    owner->setProperty("TPMMIOWhitelistSchemaVersion",
+                       topInventoryRequested ? "2" : "1");
+    owner->setProperty(
+        "TPMMIOWhitelist",
+        topInventoryRequested ?
+            "identity:0x000004,0x000000,0x101000;top:64x32@0x022700" :
+            "identity:0x000004,0x000000,0x101000");
     publishBoolean(owner, "TPMMIOReadCompleted", true);
     return true;
 #endif

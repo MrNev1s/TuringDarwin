@@ -1,0 +1,11 @@
+$ python3 tools/safety-audit.py
+SAFETY AUDIT PASSED: v0.3.0 allows 3 identity reads plus one fixed 64-dword TOP inventory
+
+$ python3 tools/test-decoder-contract.py
+decoder contract passed: TU116 ReBAR entry0 = BAR0, 16 MiB, 3 entries
+
+$ python3 tools/test-mmio-contract.py
+MMIO CONTRACT PASSED: read-only map, explicit release, identity gate, optional bounded TOP inventory
+
+$ python3 tools/test-top-contract.py
+TOP CONTRACT PASSED: fixed 64-dword table, bounded parser, Nouveau bitfields verified
