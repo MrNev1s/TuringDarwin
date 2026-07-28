@@ -85,6 +85,12 @@ jobs:
           echo "MacKernelSDK requested ref: $SDK_REF"
           echo "MacKernelSDK resolved commit: $SDK_COMMIT"
 
+      - name: Normalize script permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x tools/*.sh tools/*.py
+
       - name: Validate source and project metadata
         shell: bash
         run: |
@@ -101,7 +107,7 @@ jobs:
         run: |
           set -euo pipefail
           CONFIGURATION="${REQUESTED_CONFIGURATION:-$DEFAULT_CONFIGURATION}"
-          ./tools/build.sh "$CONFIGURATION"
+          bash ./tools/build.sh "$CONFIGURATION"
           echo "configuration=$CONFIGURATION" >> "$GITHUB_OUTPUT"
 
       - name: Inspect built bundle
