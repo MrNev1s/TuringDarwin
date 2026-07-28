@@ -100,6 +100,7 @@ jobs:
             python3 tools/test-decoder-contract.py
             python3 tools/test-mmio-contract.py
             python3 tools/test-top-contract.py
+            python3 tools/test-fb-mmu-contract.py
             plutil -lint kext/TuringProbe/Info.plist
             plutil -lint TuringProbe.xcodeproj/project.pbxproj
           } 2>&1 | tee build-source-validation.txt
@@ -137,7 +138,7 @@ jobs:
           mkdir -p dist
           ditto -c -k --sequesterRsrc --keepParent \
             "build/$CONFIGURATION/TuringProbe.kext" \
-            "dist/TuringProbe-v0.3.0-$CONFIGURATION-x86_64.kext.zip"
+            "dist/TuringProbe-v0.4.0-$CONFIGURATION-x86_64.kext.zip"
           cp "build/build-$CONFIGURATION.manifest.txt" dist/
           cp "build/build-$CONFIGURATION.log" dist/
           cp build-source-validation.txt dist/
@@ -151,7 +152,7 @@ jobs:
       - name: Upload TuringProbe artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TuringProbe-v0.3.0-${{ steps.build.outputs.configuration }}-x86_64
+          name: TuringProbe-v0.4.0-${{ steps.build.outputs.configuration }}-x86_64
           path: dist/
           if-no-files-found: error
           retention-days: 30
@@ -160,7 +161,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: TuringProbe-v0.3.0-failed-build-logs
+          name: TuringProbe-v0.4.0-failed-build-logs
           path: |
             build/*.log
             build/*.txt
