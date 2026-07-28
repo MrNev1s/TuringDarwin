@@ -15,7 +15,7 @@ SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
 [[ -d "$ROOT/MacKernelSDK/Headers" ]] || { echo "Run tools/bootstrap-sdk.sh first." >&2; exit 2; }
 [[ -f "$ROOT/MacKernelSDK.lock" ]] || { echo "Missing MacKernelSDK.lock." >&2; exit 2; }
 
-"$ROOT/tools/safety-audit.py"
+python3 "$ROOT/tools/safety-audit.py"
 mkdir -p "$OUTPUT"
 
 {
