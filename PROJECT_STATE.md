@@ -1,287 +1,167 @@
 # TuringDarwin — Canonical Project State
 
-**State version:** 2  
+**State version:** 3  
 **Updated:** 2026-07-29  
 **Repository:** `MrNev1s/TuringDarwin`  
-**Current verified runtime component:** `TuringProbe.kext 0.1.0`  
-**Current development component:** `TuringProbe.kext 0.1.1`  
+**Current real-hardware-verified component:** `TuringProbe.kext 0.1.1`  
+**Current source candidate:** `TuringProbe.kext 0.2.0`
 
-This is the canonical hand-off file for the project. Update it after every
-successful build, boot experiment, hardware-state change, or scope decision.
-Claims are tagged as follows:
+This file is the authoritative hand-off. Claims use these labels:
 
 - **[REAL-HW VERIFIED]** observed on the target computer;
-- **[OFFLINE VERIFIED]** proven from supplied files or static binary analysis;
-- **[IMPLEMENTED, NOT BUILT]** present in source but not yet compiled by Xcode;
-- **[PLANNED]** approved design, not implemented;
-- **[BLOCKED]** deliberately forbidden until an earlier gate passes.
+- **[OFFLINE VERIFIED]** proven from supplied files/static analysis;
+- **[SOURCE IMPLEMENTED, NOT BUILT]** present in source but not compiled;
+- **[PLANNED]** design only;
+- **[BLOCKED]** forbidden until an earlier gate passes.
 
-## 1. Non-negotiable safety contract
-
-The active 0.1.x branch is PCI configuration **read-only**.
-
-Forbidden in 0.1.x:
-
-- PCI configuration writes;
-- changing the PCI Command Register;
-- enabling bus mastering, memory decoding, or I/O decoding;
-- creating BAR mappings or dereferencing MMIO;
-- DMA allocation/mapping/submission;
-- interrupts, MSI/MSI-X enablement, workloops, command gates, or user clients;
-- firmware loading;
-- GPU power, clock, voltage, fan, or reset operations;
-- display/modeset or framebuffer modification.
-
-Boot controls:
-
-- `-tdprobe`: required for 0.1.x attachment;
-- `-tdoff`: force-disable;
-- `-tdmmio-read`: rejected by 0.1.x;
-- `-tdunsafe`: rejected by 0.1.x.
-
-No MMIO write is authorised. No PCI write is authorised.
-
-## 2. Target machine
-
-### CPU / platform
-
-- Intel Core i5-12400F, Alder Lake H0, 6C/12T, no iGPU.
-- MSI PRO B760M-P DDR4 (MS-7E02 rev 1.0).
-- BIOS E7E02IMS.160 dated 2023-09-09.
-- SMBIOS `iMacPro1,1`.
-- OpenCore boots macOS without an Intel iGPU.
-
-### GPU target
+## 1. Target and runtime baseline
 
 **[REAL-HW VERIFIED]**
 
 | Field | Value |
 |---|---|
-| Board | ASUS TUF Gaming GeForce GTX 1660 Ti EVO TOP |
-| GPU | NVIDIA TU116-400-A1 |
+| GPU | ASUS TUF GTX 1660 Ti, TU116-400-A1 |
 | BDF | `01:00.0` |
-| Vendor / Device | `10DE:2182` |
+| PCI ID | `10DE:2182` |
 | Subsystem | `1043:8854` |
-| Revision | `A1` |
-| Class | `030000` |
-| Header | `0x80` (multifunction) |
+| Revision / class | `A1` / `030000` |
 | ACPI path | `_SB_.PC00.PEG1.PEGP` |
-| IOService path | `/AppleACPIPlatformExpert/PC00@0/AppleACPIPCI/PEG1@1/IOPP/PEGP@0` |
-| IODeviceTree path | `/PC00@0/PEG1@1/PEGP@0` |
+| macOS | 15.7.7, build 24G720 |
+| Display baseline | GOP/IONDRV, 1920×1080 ARGB8888 |
 
-Sibling NVIDIA functions found offline:
+Sibling functions are `01:00.1` HDA (`10DE:1AEB`), `01:00.2` xHCI
+(`10DE:1AEC`), and `01:00.3` Type-C policy (`10DE:1AED`). TuringProbe matches
+only the VGA function and repeats the exact four-ID check in `start()`.
 
-- `01:00.1` — `10DE:1AEB` HDA;
-- `01:00.2` — `10DE:1AEC` USB xHCI;
-- `01:00.3` — `10DE:1AED` Type-C policy controller.
-
-`TuringProbe` matches only `01:00.0` and repeats the exact four-ID check in
-`start()`.
-
-## 3. macOS runtime baseline
-
-**[REAL-HW VERIFIED]** on 2026-07-29:
-
-- macOS `15.7.7`, build `24G720`;
-- `TuringProbe 0.1.0` loaded through OpenCore;
-- `kmutil showloaded` reported `com.mrnev1s.driver.TuringProbe (0.1.0)`;
-- IORegistry service was `registered, matched, active, busy 0`;
-- GOP/IONDRV framebuffer remained active;
-- desktop output remained `1920×1080`, ARGB8888;
-- `system_profiler` continued to report 8 MB framebuffer VRAM and no graphics
-  accelerator kext, which is expected;
-- no panic or boot hang was reported.
-
-The unified log notification from `kernelmanager_helper` saying the bundle was
-not found is not evidence of a failed load: `kmutil` and IORegistry independently
-proved the OpenCore-injected kext was active.
-
-## 4. VBIOS evidence
+## 2. VBIOS evidence
 
 **[OFFLINE VERIFIED]**
 
-| Field | Value |
-|---|---|
-| File | `TU116(3).rom` |
-| Size | `1,047,040` bytes |
-| SHA-256 | `4ea82dadeda06b347c0eca76d4bf41f0dc56e7a402452b00cb8c72b38b2e40b4` |
-| Container | `NVGI` |
-| VBIOS string | `90.16.48.40.1E` |
-| Board string | `TUF-GTX1660TI` |
-| Option-ROM chains | offsets `0x28600` and `0xA0600` |
-| Legacy image | `0xF000` bytes |
-| UEFI image | `0x11000` bytes |
-| Embedded image checksums | valid |
+- file `TU116(3).rom`, 1,047,040 bytes;
+- SHA-256 `4ea82dadeda06b347c0eca76d4bf41f0dc56e7a402452b00cb8c72b38b2e40b4`;
+- `NVGI` container, VBIOS `90.16.48.40.1E`, board string `TUF-GTX1660TI`;
+- two valid legacy+UEFI option-ROM chains with valid image checksums.
 
-BIT tables, display scripts, memory timings, and Falcon firmware descriptors
-have not yet been promoted to verified facts.
+BIT tables, memory timings, display scripts, and Falcon firmware layout are not
+yet promoted to verified facts.
 
-## 5. PCI Command Register safety result
+## 3. PCI-only milestone result
 
-**[REAL-HW VERIFIED]**
+**[REAL-HW VERIFIED]** `TuringProbe 0.1.1`:
 
-`TPCommand = 0x0003` during the 0.1.0 probe:
+- loaded and active through OpenCore;
+- PCI Command before/after `0x0003`;
+- Bus Master Enable before/after `No`;
+- no MMIO, DMA, interrupts, firmware, power change, or user client;
+- conventional capability walk valid, 3 entries;
+- extended capability walk valid, 8 entries;
+- ReBAR decode valid, 3 entries;
+- GOP output unchanged and no reported panic/hang/corruption.
 
-- I/O Space Enable = 1;
-- Memory Space Enable = 1;
-- Bus Master Enable = 0.
+Runtime log ZIP SHA-256:
+`3864fa4ebcb9a48c96f2140e38301d262ffa65fe6126cea5916ad4458135ed41`.
 
-The first two bits were pre-existing platform state required by the active GOP
-resources. Version 0.1.0 contained no write API and did not enable bus mastering.
-Version 0.1.1 additionally records the Command Register before and after the
-probe and publishes `TPCommandUnchanged`.
-
-## 6. Assigned BARs and device-memory descriptors
+## 4. Assigned resources
 
 **[REAL-HW VERIFIED]**
 
-| BAR/resource | Raw / base | Length | Classification |
+| Resource | Base | Length | Type |
 |---|---:|---:|---|
-| BAR0 | base `0x80000000` | `0x01000000` / 16 MiB | 32-bit non-prefetchable MMIO |
-| BAR1/2 | base `0x4000000000` | `0x10000000` / 256 MiB | 64-bit prefetchable |
-| BAR3/4 | base `0x4010000000` | `0x02000000` / 32 MiB | 64-bit prefetchable |
-| BAR5 | base `0x5000` | `0x80` / 128 B | I/O space |
-| Expansion ROM | base `0x81000000` | `0x80000` / 512 KiB | ROM aperture |
+| BAR0 | `0x80000000` | 16 MiB | 32-bit non-prefetchable MMIO |
+| BAR1/2 | `0x4000000000` | 256 MiB | 64-bit prefetchable |
+| BAR3/4 | `0x4010000000` | 32 MiB | 64-bit prefetchable |
+| BAR5 | `0x5000` | 128 B | I/O space |
+| ROM aperture | `0x81000000` | 512 KiB | option ROM window |
 
-No BAR was mapped by `TuringProbe 0.1.0`.
+ReBAR entries:
 
-## 7. PCI capabilities observed on the target
+| BAR | Current | Supported |
+|---:|---:|---|
+| 0 | 16 MiB | 16 MiB |
+| 1 | 256 MiB | 64, 128, 256 MiB |
+| 3 | 32 MiB | 32 MiB |
 
-### Conventional capabilities
+## 5. PCI capability chain
 
 **[REAL-HW VERIFIED]**
 
-| Offset | ID | Name |
-|---:|---:|---|
-| `0x60` | `0x01` | Power Management |
-| `0x68` | `0x05` | MSI |
-| `0x78` | `0x10` | PCI Express |
+Conventional: PM `0x60`, MSI `0x68`, PCIe `0x78`. MSI is disabled. Link maximum
+is PCIe 3.0 ×16; captured idle state was speed encoding 1 ×16.
 
-MSI is 64-bit capable and disabled. MSI-X was not present in the observed
-conventional chain.
+Extended: Virtual Channel `0x100`, Power Budgeting `0x128`, LTR `0x250`, L1 PM
+Substates `0x258`, AER `0x420`, VSEC `0x600`, Secondary PCIe `0x900`, ReBAR
+`0xBB0`.
 
-PCIe link:
+## 6. Verified 0.1.1 build provenance
 
-- capability version 2;
-- maximum PCIe speed encoding 3 (PCIe 3.0);
-- maximum width x16;
-- observed idle speed encoding 1;
-- negotiated width x16.
+**[OFFLINE + REAL-HW VERIFIED]**
 
-### Extended capabilities
+- Xcode 16.2, macOS SDK 15.2, x86_64;
+- MacKernelSDK `05094e5e88cec7caedbfb35e8449ed0db94bf95b`;
+- source commit `1168040c73962104da19d22433885e76d21e3405`;
+- Mach-O UUID `9942C8A8-8540-3530-8309-C767D6C76FD8`;
+- executable SHA-256
+  `45d1e6a2a258a7f7699e9f86ee4d30dbfbc6af3e2d04e1d494685c97d5f2d080`.
 
-**[REAL-HW VERIFIED]**
+## 7. TuringProbe 0.2.0 candidate
 
-| Offset | ID | Name |
-|---:|---:|---|
-| `0x100` | `0x0002` | Virtual Channel |
-| `0x250` | `0x0018` | Latency Tolerance Reporting |
-| `0x258` | `0x001E` | L1 PM Substates |
-| `0x128` | `0x0004` | Power Budgeting |
-| `0x420` | `0x0001` | Advanced Error Reporting |
-| `0x600` | `0x000B` | Vendor-Specific Extended Capability |
-| `0x900` | `0x0019` | Secondary PCI Express |
-| `0xBB0` | `0x0015` | Resizable BAR |
+**[SOURCE IMPLEMENTED, NOT BUILT]**
 
-Observed first ReBAR pair:
+Two modes:
 
-- capability raw `0x00000100`;
-- control raw `0x00000460`;
-- encoded entry count field = 3;
-- entry 0 identifies BAR0 with current size encoding 4, corresponding to
-  16 MiB.
+- `-tdprobe`: PCI-only compatibility mode, no BAR map;
+- `-tdprobe -tdmmio-read`: first BAR0 read-only experiment.
 
-Version 0.1.1 decodes all advertised ReBAR entries without writing controls.
+Fail-closed requirements before mapping:
 
-## 8. Build evidence for TuringProbe 0.1.0
+- compile gate `TURINGPROBE_ENABLE_MMIO_READ=1`;
+- exact target identity;
+- `-tdoff` and `-tdunsafe` absent;
+- memory decoding enabled and bus mastering disabled;
+- BAR0 raw value and IOPCIFamily descriptor agree;
+- BAR0 is exactly 16 MiB, 32-bit, non-prefetchable, and aligned.
 
-**[OFFLINE VERIFIED]**
+Mapping contract:
 
-- GitHub Actions workflow: `Build TuringProbe kext`;
-- successful run shown as build `#9`;
-- Xcode 16.2;
-- macOS SDK 15.2;
-- MacKernelSDK commit
-  `05094e5e88cec7caedbfb35e8449ed0db94bf95b`;
-- architecture `x86_64`;
-- bundle ID `com.mrnev1s.driver.TuringProbe`;
-- binary UUID `5E869CB5-83FB-322F-A1F2-F1AE313B4C2B`.
+- `IOMemoryDescriptor::map(kIOMapReadOnly)` only;
+- mapping held in a local `OSPtr<IOMemoryMap>` scope;
+- no cache-policy override;
+- no stored virtual address or retained map;
+- exactly three 32-bit reads, once each;
+- mapping destroyed before `start()` completes.
 
-Hashes:
+Whitelist:
 
-| Artifact | SHA-256 |
-|---|---|
-| GitHub artifact ZIP | `f2003338edf9600ae48665cea7c6604ed3cc305072c0e74f743e3880275a938b` |
-| Verified kext ZIP | `bbb10406dbbb70e0c5fa862150caa6bede6edc532408b2429475abb7091b876f` |
-| Mach-O executable | `695d0348cf164827e7e382dc700619b30da78f88d5c0115c219da2ed655d8609` |
-| Built Info.plist | `8ccc54cc721d0f4683b48315001e484f40bc7b478809a87377800ac9aa107e12` |
-| First runtime log bundle | `25dcb455f4727a331a83ee5bce5c26735b0c6e5c4059fd4c61bc844709c2fa20` |
+| Order | Offset | Register | Validation |
+|---:|---:|---|---|
+| 1 | `0x000004` | `NV_PMC_BOOT_1` | reject all-ones, big-endian, vGPU bits |
+| 2 | `0x000000` | `NV_PMC_BOOT_0` | require chipset `0x168`, publish revision |
+| 3 | `0x101000` | `NV_PEXTDEV_BOOT_0_STRAP` | decode known crystal straps |
 
-## 9. Source evidence inputs
+PCI Command is sampled before map, after map, after reads, and after the full
+probe; all values must match and Bus Master Enable must remain clear.
 
-| File | SHA-256 |
-|---|---|
-| `PC-DATA-20260723-121802(1).zip` | `f0cce8af98c55871c9db6b3216e1aa8e83ef3d6a7542ab99b4c09c562416fd6a` |
-| `EFI_STABLE.zip` | `3539c4d40009a52df0d08ec15c060e005ca770cd66649180e16e68da529bdfe9` |
-| `TU116(3).rom` | `4ea82dadeda06b347c0eca76d4bf41f0dc56e7a402452b00cb8c72b38b2e40b4` |
-| Uploaded test `config(1).plist` | `f91486873fea485d2923032f2e8c386f90804b0795b9474fff0c9bcf4300cd74` |
+Local source checks passed:
 
-## 10. TuringProbe 0.1.1 milestone
+- safety audit;
+- PCI/ReBAR decoder contract;
+- MMIO whitelist/map contract;
+- Python syntax, plist parse, and Xcode-project structural checks.
 
-**[IMPLEMENTED, NOT BUILT]**
+No claim of Xcode compilation, binary safety, or hardware success is made yet.
 
-0.1.1 remains PCI-config read-only and adds:
+## 8. Non-negotiable prohibition list
 
-1. explicit unsigned publication of raw 32-bit PCI values using 64-bit
-   `OSNumber` storage, eliminating confusing sign-extension in `ioreg`;
-2. human-readable conventional and extended capability names;
-3. complete bounded ReBAR entry decoding;
-4. supported ReBAR sizes in bytes and the current selected size;
-5. before/after PCI Command Register snapshots;
-6. `TPCommandUnchanged` and before/after bus-master state;
-7. explicit completion, schema, version, and boot-mode properties;
-8. exact default MacKernelSDK pin from the successful 0.1.0 build.
+No PCI write, MMIO write, writable map request, DMA, interrupt, firmware, reset,
+power/clock/fan/voltage change, GPU channel/FIFO/Copy Engine command, display
+change, full BAR dump, IOUserClient, workloop, or command gate is authorised.
 
-Acceptance gate for 0.1.1:
+## 9. Next gate
 
-- GitHub build succeeds with the pinned SDK;
-- static safety audit succeeds;
-- real boot succeeds with `-tdprobe`;
-- `TPCommandBeforeProbe == TPCommandAfterProbe == 3`;
-- both bus-master properties remain false;
-- `TPResizableBARDecodeValid = true`;
-- three ReBAR entries are decoded;
-- GOP output is unchanged.
+1. Build 0.2.0 in GitHub Actions with the pinned toolchain.
+2. Upload the complete artifact for binary/import/disassembly audit.
+3. Prepare a separate test-EFI package only after that audit.
+4. Boot PCI-only mode first (`-tdprobe`).
+5. Only after PCI-only PASS, boot BAR0 mode (`-tdprobe -tdmmio-read`).
 
-## 11. Next hardware stage after 0.1.1
-
-**[PLANNED]** `TuringProbe 0.2 — BAR0 read-only MMIO gate`.
-
-It is not yet implemented in this state package. Required design gates:
-
-- separate source branch and kext version;
-- `-tdmmio-read` required in addition to explicit compile-time enablement;
-- BAR0 only;
-- mapping obtained from the existing BAR0 descriptor;
-- fixed small whitelist of identification/status registers derived from
-  Nouveau, envytools, and NVIDIA open modules;
-- no whole-BAR dump;
-- no polling loop without a strict bound;
-- no writes of any kind;
-- publish pre/post PCI Command Register values;
-- abort if bus mastering is enabled unexpectedly;
-- one-monitor test path and untouched fallback EFI.
-
-No offsets enter the whitelist until each one has a primary-source provenance
-record and a read-safety rationale.
-
-## 12. Long-term feasibility classification
-
-- PCI diagnostics and VBIOS parsing: feasible and underway.
-- Read-only MMIO: feasible after whitelist review.
-- GPU VM/FIFO/Copy Engine: serious research task; not started.
-- Dedicated compute/Vulkan API: architecturally possible, high effort.
-- Display/modeset framebuffer: high effort and hardware-risky.
-- NVK port: very high effort.
-- WindowServer/Metal integration: currently a separate, potentially
-  impractical reverse-engineering programme.
+A successful BAR0 read does not authorise adding offsets or implementing writes.

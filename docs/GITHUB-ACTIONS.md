@@ -1,49 +1,29 @@
 # GitHub Actions build
 
-GitHub Actions compiles the read-only `TuringProbe.kext` on a hosted macOS
-runner. CI compilation does not replace the separate test-EFI procedure.
+The included workflow compiles `TuringProbe.kext` on `macos-15` with Xcode 16.2,
+macOS SDK 15.2, `x86_64`, and pinned MacKernelSDK commit
+`05094e5e88cec7caedbfb35e8449ed0db94bf95b`.
 
-## Runner and pinned toolchain
+## Build steps
 
-The workflow uses:
+1. Upload the 0.2.0 update files into the repository root, including `.github`.
+2. Commit the changes.
+3. Open **Actions -> Build TuringProbe kext -> Run workflow**.
+4. Keep `Debug` and the pre-filled full MacKernelSDK SHA.
+5. Download `TuringProbe-v0.2.0-Debug-x86_64` after a green run.
 
-- `macos-15` GitHub-hosted runner;
-- `/Applications/Xcode_16.2.app`;
-- macOS SDK 15.2;
-- `x86_64` only;
-- MacKernelSDK commit
-  `05094e5e88cec7caedbfb35e8449ed0db94bf95b` by default;
-- Debug configuration by default.
-
-The SDK commit is the exact revision used by the successful 0.1.0 build. The
-resolved commit is written to `MacKernelSDK.lock` and the build manifest.
-
-## Build 0.1.1
-
-1. Replace the repository files with the 0.1.1 source tree while preserving the
-   `.github` directory.
-2. Open **Actions**.
-3. Select **Build TuringProbe kext**.
-4. Select **Run workflow**.
-5. Keep `Debug` and the pre-filled full MacKernelSDK SHA.
-6. Download `TuringProbe-v0.1.1-Debug-x86_64` after a green run.
-
-The artifact contains:
-
-- `TuringProbe-v0.1.1-Debug-x86_64.kext.zip`;
-- build log;
-- build manifest;
-- SHA-256 file.
+The artifact contains the kext ZIP, build log, manifest, and hashes.
 
 ## CI gates
 
 - source safety audit;
-- TU116 ReBAR decoder contract test;
+- PCI/ReBAR decoder contract test;
+- MMIO whitelist/read-only mapping contract test;
 - plist and Xcode project validation;
-- Xcode compilation and linking;
+- Xcode compilation/linking;
 - `x86_64` architecture check;
 - undefined-symbol report;
-- output hashes and manifest.
+- output hashes and provenance manifest.
 
-CI does not verify real attachment, IORegistry output, boot stability, or
-hardware behavior. Those require the controlled test-EFI boot in `TESTING.md`.
+CI does not prove target attachment or MMIO behavior. Upload the entire artifact
+for static binary review before modifying the test EFI.

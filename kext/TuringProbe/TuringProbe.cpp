@@ -5,6 +5,7 @@
 #include "BARInspector.hpp"
 #include "CapabilityParser.hpp"
 #include "Logging.hpp"
+#include "MMIOReadOnly.hpp"
 #include "PCIConfig.hpp"
 
 #define super IOService
@@ -25,8 +26,8 @@ bool TuringProbe::start(IOService *provider) {
         return false;
     }
 
-    if (bootArgumentPresent("-tdmmio-read") || bootArgumentPresent("-tdunsafe")) {
-        TD_LOG("v0.1.1 rejects modes beyond the read-only PCI probe");
+    if (bootArgumentPresent("-tdunsafe")) {
+        TD_LOG("v0.2.0 rejects -tdunsafe");
         return false;
     }
 
@@ -34,6 +35,8 @@ bool TuringProbe::start(IOService *provider) {
         TD_LOG("not attaching because -tdprobe is absent");
         return false;
     }
+
+    const bool mmioRequested = bootArgumentPresent("-tdmmio-read");
 
     IOPCIDevice *candidate = OSDynamicCast(IOPCIDevice, provider);
     if (candidate == nullptr) {
@@ -64,6 +67,18 @@ bool TuringProbe::start(IOService *provider) {
     td::publishCapabilities(pciDevice_, this);
     td::publishBarAndMemoryDescriptors(pciDevice_, this);
 
+    bool mmioCompleted = false;
+    if (mmioRequested) {
+        mmioCompleted = td::performReadOnlyBar0Probe(pciDevice_, this);
+        if (!mmioCompleted) {
+            TD_LOG("refusing attachment because BAR0 read-only gate did not complete");
+            pciDevice_->release();
+            pciDevice_ = nullptr;
+            super::stop(provider);
+            return false;
+        }
+    }
+
     const UInt16 commandAfterProbe = pciDevice_->configRead16(td::kPciCommandOffset);
     td::publishNumber(this, "TPCommandBeforeProbe", commandBeforeProbe, 16);
     td::publishNumber(this, "TPCommandAfterProbe", commandAfterProbe, 16);
@@ -78,15 +93,28 @@ bool TuringProbe::start(IOService *provider) {
     td::publishBoolean(this, "TPMemorySpaceEnabled",
                        (commandAfterProbe & 0x0002U) != 0);
 
+    if (commandBeforeProbe != commandAfterProbe ||
+        (commandAfterProbe & 0x0004U) != 0) {
+        TD_LOG("refusing attachment because PCI command state is not safe");
+        pciDevice_->release();
+        pciDevice_ = nullptr;
+        super::stop(provider);
+        return false;
+    }
+
     setProperty("TuringProbeSafeReadOnly", kOSBooleanTrue);
     setProperty("TuringProbeProbeCompleted", kOSBooleanTrue);
-    setProperty("TuringProbeProbeSchemaVersion", "2");
-    setProperty("TuringProbeVersion", "0.1.1");
-    setProperty("TuringProbeBootMode", "-tdprobe");
-    setProperty("TuringProbeMilestone", "PCI-CONFIG-READ-ONLY-V0.1.1");
+    setProperty("TuringProbeProbeSchemaVersion", "3");
+    setProperty("TuringProbeVersion", "0.2.0");
+    setProperty("TuringProbeBootMode",
+                mmioRequested ? "-tdprobe -tdmmio-read" : "-tdprobe");
+    setProperty("TuringProbeMilestone",
+                mmioRequested ? "BAR0-MMIO-READ-ONLY-V0.2.0" :
+                                "PCI-CONFIG-READ-ONLY-COMPAT-V0.2.0");
     setProperty("TuringProbeTarget", "NVIDIA TU116 10DE:2182 / ASUS 1043:8854");
     setProperty("TuringProbePCIConfigWrites", kOSBooleanFalse);
-    setProperty("TuringProbeMMIOAccess", kOSBooleanFalse);
+    setProperty("TuringProbeMMIOAccess", mmioCompleted ? kOSBooleanTrue : kOSBooleanFalse);
+    setProperty("TuringProbeMMIOWrites", kOSBooleanFalse);
     setProperty("TuringProbeDMAAccess", kOSBooleanFalse);
     setProperty("TuringProbeFirmwareAccess", kOSBooleanFalse);
     setProperty("TuringProbeInterruptAccess", kOSBooleanFalse);
@@ -94,15 +122,16 @@ bool TuringProbe::start(IOService *provider) {
     setProperty("TuringProbeUserClient", kOSBooleanFalse);
 
     registerService();
-    TD_LOG("attached read-only to %02x:%02x.%x %04x:%04x subsystem %04x:%04x",
+    TD_LOG("attached read-only to %02x:%02x.%x %04x:%04x subsystem %04x:%04x mode=%s",
            pciDevice_->getBusNumber(), pciDevice_->getDeviceNumber(),
            pciDevice_->getFunctionNumber(), identity.vendor, identity.device,
-           identity.subsystemVendor, identity.subsystemDevice);
+           identity.subsystemVendor, identity.subsystemDevice,
+           mmioRequested ? "BAR0 whitelist" : "PCI only");
     return true;
 }
 
 void TuringProbe::stop(IOService *provider) {
-    TD_LOG("stop; no hardware state was changed by v0.1.1");
+    TD_LOG("stop; no PCI or MMIO writes, DMA, firmware, interrupts, or power changes were performed");
     if (pciDevice_ != nullptr) {
         pciDevice_->release();
         pciDevice_ = nullptr;

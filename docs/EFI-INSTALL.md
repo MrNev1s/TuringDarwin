@@ -1,17 +1,23 @@
-# Add to a separate test EFI
+# Add TuringProbe 0.2.0 to a separate test EFI
 
-Do not alter the known-good `EFI_STABLE` copy.
+Do not alter the known-good stable EFI. Do not install this kext into the macOS
+system volume or `/Library/Extensions`.
 
-1. Duplicate the stable EFI onto a second USB EFI partition.
-2. Copy the built bundle to:
-   `EFI/OC/Kexts/TuringProbe.kext`
-3. Add this entry as the last item in `Kernel -> Add`:
+## OpenCore entry
+
+Copy the audited build product to:
+
+```text
+EFI/OC/Kexts/TuringProbe.kext
+```
+
+Add this as the last item in `Kernel -> Add`:
 
 ```xml
 <dict>
   <key>Arch</key><string>x86_64</string>
   <key>BundlePath</key><string>TuringProbe.kext</string>
-  <key>Comment</key><string>TuringProbe 0.1 read-only PCI probe</string>
+  <key>Comment</key><string>TuringProbe 0.2.0 BAR0 read-only diagnostic</string>
   <key>Enabled</key><true/>
   <key>ExecutablePath</key><string>Contents/MacOS/TuringProbe</string>
   <key>MaxKernel</key><string>24.99.99</string>
@@ -20,10 +26,33 @@ Do not alter the known-good `EFI_STABLE` copy.
 </dict>
 ```
 
-4. Append `-tdprobe` to the test EFI's `NVRAM -> Add ->
-   7C436110-AB2A-4BBB-A880-FE41995C9F82 -> boot-args`.
-5. Run the matching `ocvalidate` from the OpenCore release used by that EFI.
-6. Boot the USB explicitly from the motherboard boot menu.
+Run the `ocvalidate` binary from the same OpenCore release as the test EFI.
 
-Do not add `-tdmmio-read` or `-tdunsafe`; v0.1.1 rejects them. Keep `-tdoff`
-available as the emergency disable argument.
+## Boot modes
+
+PCI-only fallback mode:
+
+```text
+-tdprobe
+```
+
+BAR0 read-only test mode, only after artifact audit:
+
+```text
+-tdprobe -tdmmio-read
+```
+
+Never add:
+
+```text
+-tdunsafe
+```
+
+Emergency disable:
+
+```text
+-tdoff
+```
+
+`-tdoff` may replace the TuringDarwin arguments when recovering through the
+same test EFI. An untouched fallback EFI must still remain available.

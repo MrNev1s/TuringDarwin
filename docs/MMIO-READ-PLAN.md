@@ -1,61 +1,59 @@
-# TuringProbe 0.2 — Read-only BAR0 MMIO design gate
+# TuringProbe 0.2.0 — Read-only BAR0 MMIO gate
 
-Status: **design only; no MMIO implementation in 0.1.1**.
+Status: **source implemented; build and real-hardware gates remain pending**.
 
-## Entry conditions
+## Entry evidence
 
-- 0.1.1 builds with the pinned MacKernelSDK.
-- 0.1.1 boots successfully on the target.
-- Command Register is unchanged before/after the probe.
-- Bus mastering remains disabled.
-- Complete ReBAR parsing is valid.
-- Untouched fallback EFI remains bootable.
+TuringProbe 0.1.1 passed on macOS 15.7.7 / Darwin 24G720. PCI Command
+remained `0x0003`, Bus Master Enable remained clear, BAR0 was 16 MiB, and GOP
+output remained stable.
 
-## Proposed fail-closed controls
+## Gates
 
-Both must be true before any BAR mapping is attempted:
+BAR0 mapping occurs only when all of these are true:
 
 1. build-time `TURINGPROBE_ENABLE_MMIO_READ=1`;
-2. boot argument `-tdmmio-read`.
+2. boot argument `-tdprobe`;
+3. boot argument `-tdmmio-read`;
+4. exact `10DE:2182 / 1043:8854` identity;
+5. `-tdoff` and `-tdunsafe` are absent;
+6. PCI memory decoding is enabled and bus mastering is disabled;
+7. BAR0 and its IOPCIFamily descriptor pass exact type/base/length checks.
 
-`-tdunsafe` remains rejected.
+With only `-tdprobe`, v0.2.0 remains in PCI-only compatibility mode and maps no
+BAR. This permits a safe diagnostic fallback without changing the kext.
 
-## Mapping rules
+## Mapping lifetime
 
-- BAR0 descriptor only, exact register offset `0x10`.
-- Require non-null descriptor and length at least 16 MiB as observed.
-- Create one read-only mapping if the available IOKit API supports explicit
-  read-only semantics; otherwise stop and review before implementation.
-- Never request cache policy changes without a documented reason.
-- No raw dump of the aperture.
-- No pointer arithmetic outside a dedicated checked accessor.
+- BAR0 descriptor is obtained only by PCI register `0x10`.
+- `IOMemoryDescriptor::map(kIOMapReadOnly)` is used.
+- No cache policy override is requested.
+- The mapping exists only in a local scope.
+- Exactly three fixed reads occur.
+- The `OSPtr<IOMemoryMap>` leaves scope before the service registers.
+- No mapping or virtual address is stored in the service object.
 
-## Whitelist record required for each offset
+## Whitelist
 
-- symbolic register name;
-- offset and width;
-- GPU generation applicability (TU116/Turing);
-- primary source and source revision;
-- reason the register is considered safe to read;
-- expected stability and all-ones handling;
-- whether a read can acknowledge or clear state (such registers are excluded).
+- `0x000004` — `NV_PMC_BOOT_1`;
+- `0x000000` — `NV_PMC_BOOT_0`;
+- `0x101000` — `NV_PEXTDEV_BOOT_0_STRAP`.
 
-## Runtime checks
-
-- record PCI Command Register before mapping, after mapping, and after reads;
-- abort if Bus Master Enable is unexpectedly set;
-- maximum fixed number of reads;
-- no loop driven by a hardware value;
-- no interrupt setup;
-- release mapping on every failure path and in `stop()`;
-- preserve GOP output and monitor state.
+See `REGISTER-WHITELIST.md` for source rationale and rejection policy.
 
 ## Non-goals
 
-- no MMIO writes;
-- no PRAMIN or VRAM access;
-- no VBIOS ROM enable toggles;
-- no engine reset;
-- no firmware upload;
-- no DMA, FIFO, channels, runlists, doorbells, or fences;
-- no power-management programming.
+No PCI/MMIO writes, full BAR dump, PRAMIN, VRAM, ROM toggles, DMA, buffers,
+interrupts, firmware, FIFO, channels, runlists, fences, reset, display control,
+power management, clocks, fans, voltage, or user client.
+
+## Acceptance criteria
+
+- GitHub build succeeds with pinned Xcode 16.2 / SDK 15.2 / MacKernelSDK;
+- binary audit finds exactly the intended mapping/read call sites and no writes;
+- macOS boots from the test EFI with `-tdprobe -tdmmio-read`;
+- BOOT0 identifies TU116 (`0x168`);
+- BOOT1 and strap values are plausible;
+- PCI Command is unchanged and bus mastering remains disabled;
+- mapping is released before `start()` completes;
+- GOP image, resolution, fans, and system stability are unchanged.

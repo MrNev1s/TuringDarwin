@@ -1,9 +1,9 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "updated": "2026-07-29",
   "repository": "MrNev1s/TuringDarwin",
-  "verified_runtime_version": "0.1.0",
-  "development_version": "0.1.1",
+  "verified_runtime_version": "0.1.1",
+  "development_version": "0.2.0",
   "target": {
     "bdf": "01:00.0",
     "vendor_id": "10DE",
@@ -141,12 +141,70 @@
     "power_state_changes": false,
     "user_client": false
   },
-  "next_gate": "Build and real-hardware acceptance test of TuringProbe 0.1.1",
+  "next_gate": "GitHub Actions build and static binary audit of TuringProbe 0.2.0",
   "analysis_date": "2026-07-29",
   "inputs": {
     "PC-DATA-20260723-121802(1).zip": "f0cce8af98c55871c9db6b3216e1aa8e83ef3d6a7542ab99b4c09c562416fd6a",
     "EFI_STABLE.zip": "3539c4d40009a52df0d08ec15c060e005ca770cd66649180e16e68da529bdfe9",
     "TU116(3).rom": "4ea82dadeda06b347c0eca76d4bf41f0dc56e7a402452b00cb8c72b38b2e40b4",
     "TuringProbe-v0.1-logs.zip": "25dcb455f4727a331a83ee5bce5c26735b0c6e5c4059fd4c61bc844709c2fa20"
+  },
+  "candidate_version": "0.2.0",
+  "candidate_status": "source-implemented-locally-audited-not-built-not-booted",
+  "mmio_whitelist": [
+    "0x000004",
+    "0x000000",
+    "0x101000"
+  ],
+  "primary_sources": {
+    "nouveau": "linux nvkm/engine/device/base.c revision v6.19-rc8-185-g2687c848e578",
+    "xnu": "IOMemoryDescriptor.h revision 10063.121.3",
+    "mac_kernel_sdk": "05094e5e88cec7caedbfb35e8449ed0db94bf95b"
+  },
+  "runtime_0_1_1": {
+    "result": "PASS",
+    "command_before": 3,
+    "command_after": 3,
+    "bus_master_before": false,
+    "bus_master_after": false,
+    "mmio_access": false,
+    "gop_preserved": true,
+    "logs_sha256": "3864fa4ebcb9a48c96f2140e38301d262ffa65fe6126cea5916ad4458135ed41"
+  },
+  "candidate_0_2_0": {
+    "build_status": "not-built",
+    "hardware_status": "not-tested",
+    "mapping": "IOMemoryDescriptor::map(kIOMapReadOnly), local lifetime",
+    "boot_args": [
+      "-tdprobe",
+      "-tdmmio-read"
+    ],
+    "whitelist": [
+      {
+        "offset": "0x000004",
+        "name": "NV_PMC_BOOT_1",
+        "width_bits": 32,
+        "count": 1
+      },
+      {
+        "offset": "0x000000",
+        "name": "NV_PMC_BOOT_0",
+        "width_bits": 32,
+        "count": 1
+      },
+      {
+        "offset": "0x101000",
+        "name": "NV_PEXTDEV_BOOT_0_STRAP",
+        "width_bits": 32,
+        "count": 1
+      }
+    ],
+    "pci_writes": 0,
+    "mmio_writes": 0,
+    "dma": false,
+    "interrupts": false,
+    "firmware": false,
+    "power_changes": false,
+    "user_client": false
   }
 }

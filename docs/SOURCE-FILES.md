@@ -1,29 +1,27 @@
-# Exact source and support file list for v0.1.1
+# Exact source and support file list for v0.2.0
 
 ## Canonical state
 
 - `PROJECT_STATE.md` — authoritative human-readable hand-off.
 - `PROJECT_STATE.json` — machine-readable project state.
-- `EVIDENCE.json` — evidence and input hashes.
+- `EVIDENCE.json` — evidence and input/build provenance.
 
 ## Kernel target
 
 - `kext/TuringProbe/Info.plist` — exact PCI personality and bundle metadata.
-- `kext/TuringProbe/TuringProbe.hpp` — service declaration.
-- `kext/TuringProbe/TuringProbe.cpp` — fail-closed boot gates, exact target
-  gate, lifecycle, command-register invariant, publication and registration.
-- `kext/TuringProbe/PCIConfig.hpp/.cpp` — PCI offsets, identity, fixed header
-  fields, 256-byte conventional snapshot and registry paths.
-- `kext/TuringProbe/CapabilityParser.hpp/.cpp` — bounded conventional and
-  extended capability walks, human-readable names, PM/MSI/MSI-X/PCIe and full
-  ReBAR read-only decoding.
-- `kext/TuringProbe/BARInspector.hpp/.cpp` — assigned BAR decoding and existing
-  `IODeviceMemory` metadata without mapping.
-- `kext/TuringProbe/Logging.hpp` — bounded log prefix.
-- `include/TuringDeviceIds.hpp` — exact primary and subsystem IDs.
-- `include/TuringTypes.hpp` — fixed-width PCI identity type.
-- `include/TuringRegisters.hpp` — intentionally empty; no MMIO whitelist exists
-  in 0.1.1.
+- `kext/TuringProbe/TuringProbe.hpp/.cpp` — fail-closed boot gates, exact
+  target check, lifecycle, mode selection, and Command Register invariant.
+- `kext/TuringProbe/PCIConfig.hpp/.cpp` — PCI identity/header snapshots and
+  registry paths.
+- `kext/TuringProbe/CapabilityParser.hpp/.cpp` — bounded capability walks,
+  names, PCIe/MSI telemetry, and full read-only ReBAR decoder.
+- `kext/TuringProbe/BARInspector.hpp/.cpp` — BAR and IODeviceMemory metadata.
+- `kext/TuringProbe/MMIOReadOnly.hpp/.cpp` — sole read-only BAR0 mapping and
+  three-register access module.
+- `kext/TuringProbe/Logging.hpp` — bounded kernel log prefix.
+- `include/TuringDeviceIds.hpp` — exact target IDs.
+- `include/TuringTypes.hpp` — fixed-width identity type.
+- `include/TuringRegisters.hpp` — three-entry MMIO whitelist and decode masks.
 
 ## Build and validation
 
@@ -33,13 +31,12 @@
 - `tools/bootstrap-sdk.sh`
 - `tools/build.sh`
 - `tools/safety-audit.py`
+- `tools/test-decoder-contract.py`
+- `tools/test-mmio-contract.py`
 - `tools/collect-macos.sh`
-- `tools/compare-pci.py`
-- `tools/decode-capabilities.py`
-- `tools/verify-rom.py`
-- `tools/parse-edid.py`
+- remaining offline PCI/VBIOS/EDID tools under `tools/`.
 
 ## Documentation
 
-- all files under `docs/`, especially `PROJECT_STATE.md`,
-  `MMIO-READ-PLAN.md`, `SAFETY.md`, `TESTING.md`, and `RESULT-MATRIX.md`.
+Key documents are `MMIO-READ-PLAN.md`, `REGISTER-WHITELIST.md`, `SAFETY.md`,
+`TESTING.md`, `RESULT-MATRIX.md`, and the root `PROJECT_STATE.md`.

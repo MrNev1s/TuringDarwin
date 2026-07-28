@@ -1,54 +1,97 @@
-# TuringProbe 0.1.1 live test
+# TuringProbe 0.2.0 controlled test procedure
 
-0.1.0 already passed its real-hardware acceptance test. This test verifies only
-the 0.1.1 diagnostic improvements; it does not authorise MMIO.
+Status: source implemented; Xcode build, binary audit, and real-hardware test
+remain pending.
 
-## Build gate
+## Gate A — GitHub build
 
-Run the GitHub Actions workflow using:
+Use the included workflow with:
 
 - Configuration: `Debug`;
-- MacKernelSDK ref: leave the pinned default
+- MacKernelSDK ref:
   `05094e5e88cec7caedbfb35e8449ed0db94bf95b`.
 
-Require a green workflow and retain the artifact, manifest, build log, and
-SHA-256 file.
+Require a green workflow and retain the kext ZIP, manifest, build log,
+undefined-symbol report, and SHA-256 file.
 
-## Test EFI
+Do not proceed directly from a green workflow to boot. Upload the complete
+artifact for source-to-binary and forbidden-call-site audit first.
 
-Replace only the old `TuringProbe.kext` in the already-tested separate EFI.
-Keep `-tdprobe`. Do not add `-tdmmio-read` or `-tdunsafe`.
+## Gate B — PCI-only compatibility boot
 
-## Capture
+Replace only `TuringProbe.kext` in the already-tested separate EFI and retain:
 
-```bash
-mkdir -p ~/Desktop/TuringProbe-v0.1.1-logs
-kmutil showloaded | grep -i TuringProbe \
-  > ~/Desktop/TuringProbe-v0.1.1-logs/kmutil.txt
-ioreg -r -c TuringProbe -l -w0 \
-  > ~/Desktop/TuringProbe-v0.1.1-logs/ioreg-turingprobe.txt
-ioreg -l -w0 -p IOService \
-  > ~/Desktop/TuringProbe-v0.1.1-logs/ioreg-full.txt
-log show --last boot --style compact \
-  --predicate 'eventMessage CONTAINS[c] "TuringProbe"' \
-  > ~/Desktop/TuringProbe-v0.1.1-logs/kernel-log.txt
-system_profiler SPDisplaysDataType \
-  > ~/Desktop/TuringProbe-v0.1.1-logs/displays.txt
-sw_vers > ~/Desktop/TuringProbe-v0.1.1-logs/sw-vers.txt
-cd ~/Desktop && zip -r TuringProbe-v0.1.1-logs.zip TuringProbe-v0.1.1-logs
+```text
+-tdprobe
 ```
 
-## Acceptance criteria
+This proves the 0.2.0 binary can reproduce the 0.1.1 PCI-only behavior without
+mapping BAR0.
 
-- version `0.1.1` is loaded and active;
-- desktop/display behaviour is unchanged;
-- `TuringProbeProbeCompleted = Yes`;
-- `TPCommandBeforeProbe = 3`;
-- `TPCommandAfterProbe = 3`;
-- `TPCommandUnchanged = Yes`;
-- both bus-master before/after properties are `No`;
-- raw BAR/header values no longer appear sign-extended;
-- conventional and extended entries contain correct names;
-- `TPResizableBARDecodeValid = Yes`;
-- `TPResizableBARDecodedEntryCount = 3`;
-- no panic, fan/power anomaly, or display change occurs.
+Required observations:
+
+- kext version `0.2.0` loaded and active;
+- `TuringProbeBootMode = -tdprobe`;
+- `TuringProbeMMIOAccess = No`;
+- PCI Command unchanged and Bus Master Enable clear;
+- display behavior unchanged.
+
+## Gate C — first BAR0 read-only boot
+
+Only after Gate B passes, use the separate test EFI with:
+
+```text
+-tdprobe -tdmmio-read
+```
+
+Use one monitor, retain physical access to power/reset, and keep the untouched
+fallback EFI available. Do not repeat a failed boot without first reviewing the
+panic/photo/logs.
+
+## Log capture
+
+```bash
+mkdir -p ~/Desktop/TuringProbe-v0.2.0-logs
+kmutil showloaded | grep -i TuringProbe \
+  > ~/Desktop/TuringProbe-v0.2.0-logs/kmutil.txt
+ioreg -r -c TuringProbe -l -w0 \
+  > ~/Desktop/TuringProbe-v0.2.0-logs/ioreg-turingprobe.txt
+ioreg -l -w0 -p IOService \
+  > ~/Desktop/TuringProbe-v0.2.0-logs/ioreg-full.txt
+log show --last boot --style compact \
+  --predicate 'eventMessage CONTAINS[c] "TuringProbe"' \
+  > ~/Desktop/TuringProbe-v0.2.0-logs/kernel-log.txt
+system_profiler SPDisplaysDataType \
+  > ~/Desktop/TuringProbe-v0.2.0-logs/displays.txt
+sw_vers > ~/Desktop/TuringProbe-v0.2.0-logs/sw-vers.txt
+nvram boot-args > ~/Desktop/TuringProbe-v0.2.0-logs/boot-args.txt 2>&1 || true
+cd ~/Desktop && zip -r TuringProbe-v0.2.0-logs.zip TuringProbe-v0.2.0-logs
+```
+
+The bundled `tools/collect-macos.sh` performs the same collection.
+
+## BAR0 acceptance criteria
+
+All of the following must be present:
+
+- `TuringProbeVersion = 0.2.0`;
+- `TuringProbeBootMode = -tdprobe -tdmmio-read`;
+- `TuringProbeMMIOAccess = Yes`;
+- `TuringProbeMMIOWrites = No`;
+- `TPBAR0MappingCreated = Yes`;
+- `TPBAR0MappingReadOnlyRequested = Yes`;
+- `TPBAR0MappingRetainedAfterProbe = No`;
+- `TPBAR0MappingReleased = Yes`;
+- `TPBAR0MappingLength = 16777216`;
+- `TPMMIOReadCount = 3`;
+- `TPMMIOReadCompleted = Yes`;
+- `TPMMIOChipset = 0x168` and `TPMMIOChipsetIsTU116 = Yes`;
+- `TPMMIOCrystalDecodeValid = Yes`;
+- `TPMMIOVgpuBits = 0`;
+- PCI Command values before map, after map, after reads, and after the full probe
+  are identical;
+- all Bus Master properties remain `No`;
+- no panic, hang, fan/power anomaly, or display corruption occurs.
+
+A successful read-only result does not authorise any MMIO write or later GPU
+initialisation step.

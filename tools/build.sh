@@ -17,6 +17,8 @@ SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
 [[ -f "$ROOT/MacKernelSDK.lock" ]] || { echo "Missing MacKernelSDK.lock." >&2; exit 2; }
 
 python3 "$ROOT/tools/safety-audit.py"
+python3 "$ROOT/tools/test-decoder-contract.py"
+python3 "$ROOT/tools/test-mmio-contract.py"
 
 # Do not pass `clean build` to xcodebuild while CONFIGURATION_BUILD_DIR lives
 # inside a directory created by this script. Xcode 16 refuses to delete such
@@ -40,6 +42,9 @@ mkdir -p "$OUTPUT"
   echo "sdk_version=$(xcrun --sdk macosx --show-sdk-version)"
   echo "sdk_commit=$(git -C "$ROOT/MacKernelSDK" rev-parse HEAD)"
   echo "source_commit=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo uncommitted-source-tree)"
+  echo "turingprobe_version=0.2.0"
+  echo "mmio_compile_gate=TURINGPROBE_ENABLE_MMIO_READ=1"
+  echo "mmio_whitelist=0x000004,0x000000,0x101000"
 } > "$MANIFEST"
 
 set -o pipefail

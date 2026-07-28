@@ -1,9 +1,9 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "updated": "2026-07-29",
   "repository": "MrNev1s/TuringDarwin",
-  "verified_runtime_version": "0.1.0",
-  "development_version": "0.1.1",
+  "verified_runtime_version": "0.1.1",
+  "development_version": "0.2.0",
   "target": {
     "bdf": "01:00.0",
     "vendor_id": "10DE",
@@ -133,13 +133,67 @@
     "status": "success"
   },
   "safety": {
-    "pci_config_writes": false,
-    "mmio_access": false,
-    "dma_access": false,
-    "interrupt_access": false,
-    "firmware_access": false,
-    "power_state_changes": false,
-    "user_client": false
+    "verified_runtime_0_1_1": {
+      "pci_config_writes": false,
+      "mmio_access": false,
+      "dma_access": false,
+      "interrupt_access": false,
+      "firmware_access": false,
+      "power_state_changes": false,
+      "user_client": false
+    },
+    "candidate_0_2_0": {
+      "pci_config_writes": false,
+      "mmio_read_access": true,
+      "mmio_writes": false,
+      "dma_access": false,
+      "interrupt_access": false,
+      "firmware_access": false,
+      "power_state_changes": false,
+      "user_client": false
+    }
   },
-  "next_gate": "Build and real-hardware acceptance test of TuringProbe 0.1.1"
+  "next_gate": "GitHub Actions build and static binary audit of TuringProbe 0.2.0 before any EFI change",
+  "current_stage": "TuringProbe 0.2.0 BAR0 read-only source implemented; Xcode build and hardware gates pending",
+  "candidate_version": "0.2.0",
+  "candidate_status": "source-implemented-locally-audited-not-built-not-booted",
+  "candidate_mmio": {
+    "bar": 0,
+    "mapping": "kIOMapReadOnly, short-lived, not retained",
+    "boot_args": [
+      "-tdprobe",
+      "-tdmmio-read"
+    ],
+    "compile_gate": "TURINGPROBE_ENABLE_MMIO_READ=1",
+    "reads": [
+      {
+        "offset": "0x000004",
+        "name": "NV_PMC_BOOT_1",
+        "width_bits": 32,
+        "count": 1
+      },
+      {
+        "offset": "0x000000",
+        "name": "NV_PMC_BOOT_0",
+        "width_bits": 32,
+        "count": 1
+      },
+      {
+        "offset": "0x101000",
+        "name": "NV_PEXTDEV_BOOT_0_STRAP",
+        "width_bits": 32,
+        "count": 1
+      }
+    ],
+    "writes": 0,
+    "dma": false,
+    "interrupts": false,
+    "firmware": false,
+    "power_changes": false,
+    "user_client": false,
+    "status": "source-implemented-not-built-not-booted",
+    "read_count": 3,
+    "pci_command_invariant_required": true,
+    "bus_master_must_remain_disabled": true
+  }
 }
