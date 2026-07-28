@@ -1,0 +1,152 @@
+name: Build TuringProbe kext
+
+on:
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: Build configuration
+        required: true
+        default: Debug
+        type: choice
+        options:
+          - Debug
+          - Release
+      mac_kernel_sdk_ref:
+        description: MacKernelSDK commit, tag, or branch (resolved SHA is recorded)
+        required: true
+        default: master
+        type: string
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - '.github/workflows/build-kext.yml'
+      - 'TuringProbe.xcodeproj/**'
+      - 'kext/**'
+      - 'include/**'
+      - 'tools/**'
+      - 'MacKernelSDK.lock'
+  pull_request:
+    paths:
+      - '.github/workflows/build-kext.yml'
+      - 'TuringProbe.xcodeproj/**'
+      - 'kext/**'
+      - 'include/**'
+      - 'tools/**'
+      - 'MacKernelSDK.lock'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: turingprobe-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  XCODE_PATH: /Applications/Xcode_16.2.app/Contents/Developer
+  DEFAULT_CONFIGURATION: Debug
+  DEFAULT_SDK_REF: master
+
+jobs:
+  build:
+    name: TuringProbe x86_64
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 16.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "$XCODE_PATH"
+          sudo xcode-select --switch "$XCODE_PATH"
+          xcodebuild -version
+          test "$(xcrun --sdk macosx --show-sdk-version)" = "15.2"
+
+      - name: Resolve and pin MacKernelSDK
+        id: sdk
+        shell: bash
+        env:
+          REQUESTED_REF: ${{ github.event.inputs.mac_kernel_sdk_ref }}
+        run: |
+          set -euo pipefail
+          SDK_REF="${REQUESTED_REF:-$DEFAULT_SDK_REF}"
+          rm -rf MacKernelSDK
+          git clone --no-checkout --filter=blob:none https://github.com/acidanthera/MacKernelSDK.git MacKernelSDK
+          git -C MacKernelSDK fetch --depth=1 origin "$SDK_REF"
+          git -C MacKernelSDK checkout --detach FETCH_HEAD
+          SDK_COMMIT="$(git -C MacKernelSDK rev-parse HEAD)"
+          printf '%s\n' "$SDK_COMMIT" > MacKernelSDK.lock
+          echo "commit=$SDK_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "MacKernelSDK requested ref: $SDK_REF"
+          echo "MacKernelSDK resolved commit: $SDK_COMMIT"
+
+      - name: Validate source and project metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/safety-audit.py
+          plutil -lint kext/TuringProbe/Info.plist
+          plutil -lint TuringProbe.xcodeproj/project.pbxproj
+
+      - name: Build kext
+        id: build
+        shell: bash
+        env:
+          REQUESTED_CONFIGURATION: ${{ github.event.inputs.configuration }}
+        run: |
+          set -euo pipefail
+          CONFIGURATION="${REQUESTED_CONFIGURATION:-$DEFAULT_CONFIGURATION}"
+          ./tools/build.sh "$CONFIGURATION"
+          echo "configuration=$CONFIGURATION" >> "$GITHUB_OUTPUT"
+
+      - name: Inspect built bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          CONFIGURATION="${{ steps.build.outputs.configuration }}"
+          KEXT="build/$CONFIGURATION/TuringProbe.kext"
+          test -d "$KEXT/Contents/MacOS"
+          test -f "$KEXT/Contents/MacOS/TuringProbe"
+          plutil -lint "$KEXT/Contents/Info.plist"
+          file "$KEXT/Contents/MacOS/TuringProbe" | tee "build/file-$CONFIGURATION.txt"
+          lipo -archs "$KEXT/Contents/MacOS/TuringProbe" | tee "build/architectures-$CONFIGURATION.txt"
+          test "$(lipo -archs "$KEXT/Contents/MacOS/TuringProbe")" = "x86_64"
+          nm -u "$KEXT/Contents/MacOS/TuringProbe" > "build/undefined-symbols-$CONFIGURATION.txt"
+
+      - name: Package build product
+        shell: bash
+        run: |
+          set -euo pipefail
+          CONFIGURATION="${{ steps.build.outputs.configuration }}"
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent \
+            "build/$CONFIGURATION/TuringProbe.kext" \
+            "dist/TuringProbe-v0.1-$CONFIGURATION-x86_64.kext.zip"
+          cp "build/build-$CONFIGURATION.manifest.txt" dist/
+          cp "build/build-$CONFIGURATION.log" dist/
+          shasum -a 256 dist/* | tee dist/SHA256SUMS.txt
+
+      - name: Upload TuringProbe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TuringProbe-v0.1-${{ steps.build.outputs.configuration }}-x86_64
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload diagnostics after failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TuringProbe-v0.1-failed-build-logs
+          path: |
+            build/*.log
+            build/*.txt
+            MacKernelSDK.lock
+          if-no-files-found: warn
+          retention-days: 14
