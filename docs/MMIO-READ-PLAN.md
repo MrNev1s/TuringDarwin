@@ -1,4 +1,4 @@
-# TuringProbe 0.2.1 — Read-only BAR0 MMIO gate
+# TuringProbe 0.3.0 — Read-only BAR0 MMIO gate
 
 Status: **source implemented; build and real-hardware gates remain pending**.
 
@@ -20,7 +20,7 @@ BAR0 mapping occurs only when all of these are true:
 6. PCI memory decoding is enabled and bus mastering is disabled;
 7. BAR0 and its IOPCIFamily descriptor pass exact type/base/length checks.
 
-With only `-tdprobe`, v0.2.1 remains in PCI-only compatibility mode and maps no
+With only `-tdprobe`, v0.3.0 remains in PCI-only compatibility mode and maps no
 BAR. This permits a safe diagnostic fallback without changing the kext.
 
 ## Mapping lifetime
@@ -57,3 +57,10 @@ power management, clocks, fans, voltage, or user client.
 - PCI Command is unchanged and bus mastering remains disabled;
 - mapping is released before `start()` completes;
 - GOP image, resolution, fans, and system stability are unchanged.
+
+## 0.4.0 FB/MMU profile gate
+
+The next candidate adds one static read at `0x100CE0`, using the decoder from
+Nouveau `gp102_fb_vidmem_size()`. The result must decode to exactly 6 GiB on the
+exact target board. TU102 MMU constants are published as source-only metadata;
+no MMU control, fault, invalidate or page-table register is accessed.

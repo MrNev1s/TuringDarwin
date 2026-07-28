@@ -1,83 +1,47 @@
-# TuringDarwin / TuringProbe 0.3.0
+# TuringDarwin / TuringProbe 0.4.0
 
-`TuringProbe.kext` is the deliberately constrained diagnostic component for the
-exact ASUS TU116 board `10DE:2182 / 1043:8854`. It is not a framebuffer,
-accelerator, Vulkan, Metal, compute, power-management, or display driver.
+`TuringProbe.kext` is a deliberately constrained research probe for the exact
+ASUS GTX 1660 Ti board `10DE:2182 / 1043:8854`. It is not yet a graphics,
+framebuffer, Metal, Vulkan, compute, display or power-management driver.
 
-Read [`PROJECT_STATE.md`](PROJECT_STATE.md) first. It is the canonical project
-hand-off and separates real-hardware facts from source-only work.
+Read `PROJECT_STATE.md` first. It separates real-hardware results from source
+work that has not yet been built or booted.
 
-## Verified baseline
+## Real-hardware baseline
 
-`TuringProbe 0.1.1` is real-hardware verified on macOS 15.7.7 / Darwin 24G720:
+TuringProbe 0.3.0 has passed PCI-only, identity-only and bounded PTOP tests on
+macOS 15.7.7. It safely identified TU116 A1 and decoded ten advertised hardware
+blocks while preserving PCI Command `0x0003`, disabled Bus Master and the GOP
+framebuffer.
 
-- exact PCI match and active IORegistry service;
-- PCI Command Register remained `0x0003` before and after the probe;
-- Bus Master Enable remained clear;
-- BAR0 is a 16 MiB, 32-bit, non-prefetchable MMIO aperture;
-- GOP/IONDRV output remained stable at 1920×1080;
-- no MMIO, DMA, interrupt, firmware, power, or user-client path was used.
+## 0.4.0 modes
 
-## 0.3.0 scope
+- `-tdprobe`: PCI-only, no BAR mapping.
+- `-tdprobe -tdmmio-read`: three verified TU116 identity reads.
+- `-tdprobe -tdmmio-read -tdtop-read`: verified fixed 64-dword PTOP inventory.
+- `-tdprobe -tdmmio-read -tdfb-read`: new candidate mode; three identity reads
+  plus one read of `0x100CE0` to decode physical VRAM capacity.
 
-Version 0.3.0 adds the first **read-only BAR0 experiment**. It has two modes:
+Version 0.4.0 rejects simultaneous `-tdtop-read` and `-tdfb-read`.
 
-- `-tdprobe`: PCI-only compatibility mode; no BAR is mapped;
-- `-tdprobe -tdmmio-read`: maps only BAR0 with `kIOMapReadOnly`, reads exactly
-  three fixed 32-bit registers once each, then explicitly releases the mapping before
-  `start()` completes.
+The new FB mode publishes a source-backed TU102 MMU profile—47-bit DMA, 16 MMU
+kinds, GP100 VMM class and 16 KiB default big pages—but does not read or modify
+MMU control state.
 
-The three authorised offsets are:
+## Safety boundary
 
-| Offset | Register | Purpose |
-|---:|---|---|
-| `0x000004` | `NV_PMC_BOOT_1` | endian/vGPU sanity gate |
-| `0x000000` | `NV_PMC_BOOT_0` | TU116 chipset and revision |
-| `0x101000` | `NV_PEXTDEV_BOOT_0_STRAP` | crystal strap decode |
-
-No PCI or MMIO write primitive exists in the new module. There is no full BAR
-dump, loop, DMA allocation, bus-master change, interrupt registration, firmware
-loading, reset, power control, display control, or IOUserClient.
-
-Fail-closed controls:
-
-- `-tdoff` always disables attachment;
-- `-tdprobe` is always required;
-- `-tdmmio-read` is required only for the BAR0 path;
-- `-tdunsafe` is rejected;
-- exact device/subsystem IDs, BAR type/base/size, memory decoding, and disabled
-  bus mastering are all checked before mapping.
+There are no PCI/MMIO writes, DMA, interrupts, firmware, reset, power/clock/fan
+control, FIFO/channels, engine commands, display programming or IOUserClient.
+BAR0 uses `kIOMapReadOnly` and is explicitly released before `start()` returns.
 
 ## Build status
 
-The source passes local structural audits and contract tests. It has **not yet
-been compiled by Xcode or run on the target GPU**. Do not place
-`-tdmmio-read` in an EFI until the GitHub-built artifact has been uploaded and
-statically audited.
+The 0.4.0 source passes local structural and contract tests. It has not been
+compiled with Xcode and has not been run on hardware. Keep the verified 0.3.0
+kext and `-tdprobe` in the test EFI until the 0.4.0 GitHub artifact is audited.
 
-The workflow pins:
-
-- Xcode 16.2;
-- macOS SDK 15.2;
-- `x86_64`;
-- MacKernelSDK commit
-  `05094e5e88cec7caedbfb35e8449ed0db94bf95b`.
-
-Run **Build TuringProbe kext** with `Debug`. Expected artifact:
+Expected GitHub artifact:
 
 ```text
-TuringProbe-v0.3.0-Debug-x86_64
+TuringProbe-v0.4.0-Debug-x86_64
 ```
-
-
-## 0.3.0 PTOP inventory mode
-
-The new experimental mode is enabled only by the exact boot-argument set:
-
-```text
--tdprobe -tdmmio-read -tdtop-read
-```
-
-It performs the three verified identity reads and then a fixed 64-dword read of
-`0x022700..0x0227fc`, mirroring Nouveau `gk104_top_parse`. It does not poll,
-write, retain the BAR0 mapping, or expose arbitrary offsets.

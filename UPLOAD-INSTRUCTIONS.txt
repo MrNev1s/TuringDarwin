@@ -1,8 +1,9 @@
-TuringDarwin 0.1.1 update-only package
+TuringDarwin v0.4.0 UPDATE-ONLY
 
-Upload the CONTENTS of this directory to the root of MrNev1s/TuringDarwin.
-Allow GitHub to replace files with the same paths. The hidden .github folder
-must be included. Commit message: TuringProbe 0.1.1 read-only diagnostics.
-
-Then run Actions -> Build TuringProbe kext with Debug and the pre-filled full
-MacKernelSDK SHA. Do not add -tdmmio-read or -tdunsafe.
+1. Extract this archive.
+2. Upload its entire contents to the root of the existing GitHub repository.
+3. Preserve the hidden .github directory and replace existing files.
+4. Commit message: TuringProbe 0.4.0 read-only FB capacity probe
+5. Run GitHub Actions -> Build TuringProbe kext -> Debug.
+6. Expected artifact: TuringProbe-v0.4.0-Debug-x86_64
+7. Do not install the kext or add -tdfb-read before binary audit.

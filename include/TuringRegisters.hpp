@@ -53,11 +53,35 @@ constexpr UInt32 kTopEnumResetShift = 9U;
 constexpr UInt32 kTopEngineTypeMask = 0x7FFFFFFCU;
 constexpr UInt32 kTopEngineTypeShift = 2U;
 
+
+// TU102/TU116 inherits Nouveau's gp102_fb_vidmem_size() decoder. It reads
+// one static capacity encoding from BAR0+0x100CE0.
+constexpr UInt32 kNvPfbVidmemSizeOffset = 0x100CE0U;
+constexpr UInt32 kPfbVidmemMagnitudeMask = 0x000003F0U;
+constexpr UInt32 kPfbVidmemMagnitudeShift = 4U;
+constexpr UInt32 kPfbVidmemScaleMask = 0x0000000FU;
+constexpr UInt32 kPfbVidmemReducedCapacityBit = 0x40000000U;
+constexpr UInt64 kExpectedTargetVidmemBytes = 6ULL * 1024ULL * 1024ULL * 1024ULL;
+
+// Source-backed architecture profile from Nouveau's tu102_mmu definition.
+// These constants are published as metadata and do not cause extra MMIO reads.
+constexpr UInt32 kTu102MmuDmaBits = 47U;
+constexpr UInt32 kTu102MmuKindCount = 16U;
+constexpr UInt32 kTu102MmuInvalidKind = 0x07U;
+constexpr UInt32 kTu102DefaultBigPageKiB = 16U;
+constexpr UInt8 kTu102MmuKindMap[kTu102MmuKindCount] = {
+    0x00U, 0x01U, 0x02U, 0x03U, 0x04U, 0x05U, 0x06U, 0x07U,
+    0x06U, 0x06U, 0x02U, 0x01U, 0x03U, 0x04U, 0x05U, 0x07U,
+};
+
 constexpr UInt32 kExpectedBar0Length = 0x01000000U; // 16 MiB, real-hardware verified.
 constexpr UInt32 kIdentityMmioReadCount = 3U;
 constexpr UInt32 kTopInventoryMmioReadCount = kTopTableWordCount;
-constexpr UInt32 kExpandedMmioReadCount =
+constexpr UInt32 kFbMmuInventoryMmioReadCount = 1U;
+constexpr UInt32 kExpandedTopMmioReadCount =
     kIdentityMmioReadCount + kTopInventoryMmioReadCount;
+constexpr UInt32 kExpandedFbMmuMmioReadCount =
+    kIdentityMmioReadCount + kFbMmuInventoryMmioReadCount;
 
 struct MmioRegisterDefinition {
     const char *name;
@@ -80,7 +104,13 @@ static_assert(kNvPextdevBoot0StrapOffset + 4U <= kExpectedBar0Length,
 static_assert(kTopTableBaseOffset + kTopTableByteLength <=
                   kExpectedBar0Length,
               "TOP table is outside BAR0");
-static_assert(kExpandedMmioReadCount == 67U,
-              "expanded MMIO read count must remain exactly 67");
+static_assert(kExpandedTopMmioReadCount == 67U,
+              "TOP expanded MMIO read count must remain exactly 67");
+static_assert(kExpandedFbMmuMmioReadCount == 4U,
+              "FB/MMU expanded MMIO read count must remain exactly 4");
+static_assert(kNvPfbVidmemSizeOffset + 4U <= kExpectedBar0Length,
+              "FB capacity register is outside BAR0");
+static_assert(sizeof(kTu102MmuKindMap) == kTu102MmuKindCount,
+              "TU102 MMU kind-map size mismatch");
 
 } // namespace td

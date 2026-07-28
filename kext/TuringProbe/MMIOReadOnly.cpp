@@ -3,6 +3,7 @@
 #include <IOKit/IOMemoryDescriptor.h>
 #include <libkern/OSByteOrder.h>
 
+#include "FbMmuInventory.hpp"
 #include "Logging.hpp"
 #include "PCIConfig.hpp"
 #include "TopInventory.hpp"
@@ -44,7 +45,8 @@ bool fail(IOService *owner, const char *reason) {
 } // namespace
 
 bool performReadOnlyBar0Probe(IOPCIDevice *device, IOService *owner,
-                              bool topInventoryRequested) {
+                              bool topInventoryRequested,
+                              bool fbMmuInventoryRequested) {
 #if TURINGPROBE_ENABLE_MMIO_READ != 1
     return fail(owner, "compile-time MMIO read gate is disabled");
 #else
@@ -117,6 +119,7 @@ bool performReadOnlyBar0Probe(IOPCIDevice *device, IOService *owner,
     bool mappingCreated = false;
     bool mappingReleased = false;
     bool topInventoryCompleted = false;
+    bool fbMmuInventoryCompleted = false;
     const char *mappingFailure = nullptr;
 
     // For third-party C++14 kexts, the IOKit transition pointer alias is raw
@@ -151,7 +154,7 @@ bool performReadOnlyBar0Probe(IOPCIDevice *device, IOService *owner,
             if (boot1 == 0xFFFFFFFFU) {
                 mappingFailure = "NV_PMC_BOOT_1 returned all ones";
             } else if (boot1 == kBoot1BigEndianValue) {
-                mappingFailure = "GPU reports big-endian MMIO; v0.3.0 will not switch it";
+                mappingFailure = "GPU reports big-endian MMIO; v0.4.0 will not switch it";
             } else if (vgpuBits != 0U) {
                 mappingFailure = "NV_PMC_BOOT_1 reports a vGPU mode";
             } else if (boot0 == 0U || boot0 == 0xFFFFFFFFU) {
@@ -166,6 +169,13 @@ bool performReadOnlyBar0Probe(IOPCIDevice *device, IOService *owner,
                 topInventoryCompleted = performReadOnlyTopInventory(bar0, owner);
                 if (!topInventoryCompleted) {
                     mappingFailure = "bounded TOP device inventory did not decode safely";
+                }
+            } else if (fbMmuInventoryRequested) {
+                fbMmuInventoryCompleted =
+                    performReadOnlyFbMmuInventory(bar0, owner);
+                if (!fbMmuInventoryCompleted) {
+                    mappingFailure =
+                        "FB capacity/MMU source profile did not validate safely";
                 }
             }
 
@@ -221,19 +231,27 @@ bool performReadOnlyBar0Probe(IOPCIDevice *device, IOService *owner,
     publishBoolean(owner, "TPMMIOCrystalDecodeValid", crystalKHz != 0U);
     publishBoolean(owner, "TPTopInventoryRequested", topInventoryRequested);
     publishBoolean(owner, "TPTopInventoryCompleted", topInventoryCompleted);
+    publishBoolean(owner, "TPFbMmuInventoryRequested", fbMmuInventoryRequested);
+    publishBoolean(owner, "TPFbMmuInventoryCompleted", fbMmuInventoryCompleted);
     publishNumber(owner, "TPMMIOIdentityReadCount", kIdentityMmioReadCount, 32);
     publishNumber(owner, "TPMMIOTopReadCount",
                   topInventoryRequested ? kTopInventoryMmioReadCount : 0U, 32);
+    publishNumber(owner, "TPMMIOFbMmuReadCount",
+                  fbMmuInventoryRequested ? kFbMmuInventoryMmioReadCount : 0U, 32);
     publishNumber(owner, "TPMMIOReadCount",
-                  topInventoryRequested ? kExpandedMmioReadCount :
-                                          kIdentityMmioReadCount, 32);
+                  topInventoryRequested ? kExpandedTopMmioReadCount :
+                  (fbMmuInventoryRequested ? kExpandedFbMmuMmioReadCount :
+                                             kIdentityMmioReadCount), 32);
     owner->setProperty("TPMMIOWhitelistSchemaVersion",
-                       topInventoryRequested ? "2" : "1");
+                       (topInventoryRequested || fbMmuInventoryRequested) ?
+                           "3" : "1");
     owner->setProperty(
         "TPMMIOWhitelist",
         topInventoryRequested ?
             "identity:0x000004,0x000000,0x101000;top:64x32@0x022700" :
-            "identity:0x000004,0x000000,0x101000");
+        (fbMmuInventoryRequested ?
+            "identity:0x000004,0x000000,0x101000;fb:0x100CE0" :
+            "identity:0x000004,0x000000,0x101000"));
     publishBoolean(owner, "TPMMIOReadCompleted", true);
     return true;
 #endif

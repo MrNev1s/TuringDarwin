@@ -27,7 +27,7 @@ bool TuringProbe::start(IOService *provider) {
     }
 
     if (bootArgumentPresent("-tdunsafe")) {
-        TD_LOG("v0.3.0 rejects -tdunsafe");
+        TD_LOG("v0.4.0 rejects -tdunsafe");
         return false;
     }
 
@@ -38,8 +38,17 @@ bool TuringProbe::start(IOService *provider) {
 
     const bool mmioRequested = bootArgumentPresent("-tdmmio-read");
     const bool topRequested = bootArgumentPresent("-tdtop-read");
+    const bool fbMmuRequested = bootArgumentPresent("-tdfb-read");
     if (topRequested && !mmioRequested) {
         TD_LOG("refusing -tdtop-read without -tdmmio-read");
+        return false;
+    }
+    if (fbMmuRequested && !mmioRequested) {
+        TD_LOG("refusing -tdfb-read without -tdmmio-read");
+        return false;
+    }
+    if (topRequested && fbMmuRequested) {
+        TD_LOG("refusing simultaneous -tdtop-read and -tdfb-read in v0.4.0");
         return false;
     }
 
@@ -75,7 +84,7 @@ bool TuringProbe::start(IOService *provider) {
     bool mmioCompleted = false;
     if (mmioRequested) {
         mmioCompleted = td::performReadOnlyBar0Probe(
-            pciDevice_, this, topRequested);
+            pciDevice_, this, topRequested, fbMmuRequested);
         if (!mmioCompleted) {
             TD_LOG("refusing attachment because BAR0 read-only gate did not complete");
             pciDevice_->release();
@@ -110,23 +119,28 @@ bool TuringProbe::start(IOService *provider) {
 
     setProperty("TuringProbeSafeReadOnly", kOSBooleanTrue);
     setProperty("TuringProbeProbeCompleted", kOSBooleanTrue);
-    setProperty("TuringProbeProbeSchemaVersion", "4");
-    setProperty("TuringProbeVersion", "0.3.0");
+    setProperty("TuringProbeProbeSchemaVersion", "5");
+    setProperty("TuringProbeVersion", "0.4.0");
     setProperty(
         "TuringProbeBootMode",
         topRequested ? "-tdprobe -tdmmio-read -tdtop-read" :
-        (mmioRequested ? "-tdprobe -tdmmio-read" : "-tdprobe"));
+        (fbMmuRequested ? "-tdprobe -tdmmio-read -tdfb-read" :
+        (mmioRequested ? "-tdprobe -tdmmio-read" : "-tdprobe")));
     setProperty(
         "TuringProbeMilestone",
-        topRequested ? "BAR0-TOP-INVENTORY-READ-ONLY-V0.3.0" :
-        (mmioRequested ? "BAR0-IDENTITY-READ-ONLY-V0.3.0" :
-                         "PCI-CONFIG-READ-ONLY-COMPAT-V0.3.0"));
+        topRequested ? "BAR0-TOP-INVENTORY-READ-ONLY-V0.4.0" :
+        (fbMmuRequested ? "BAR0-FB-MMU-PROFILE-READ-ONLY-V0.4.0" :
+        (mmioRequested ? "BAR0-IDENTITY-READ-ONLY-V0.4.0" :
+                         "PCI-CONFIG-READ-ONLY-COMPAT-V0.4.0")));
     setProperty("TuringProbeTarget", "NVIDIA TU116 10DE:2182 / ASUS 1043:8854");
     setProperty("TuringProbePCIConfigWrites", kOSBooleanFalse);
     setProperty("TuringProbeMMIOAccess", mmioCompleted ? kOSBooleanTrue : kOSBooleanFalse);
     setProperty("TuringProbeMMIOWrites", kOSBooleanFalse);
     setProperty("TuringProbeTopInventoryAccess",
                 topRequested && mmioCompleted ?
+                    kOSBooleanTrue : kOSBooleanFalse);
+    setProperty("TuringProbeFbMmuInventoryAccess",
+                fbMmuRequested && mmioCompleted ?
                     kOSBooleanTrue : kOSBooleanFalse);
     setProperty("TuringProbeDMAAccess", kOSBooleanFalse);
     setProperty("TuringProbeFirmwareAccess", kOSBooleanFalse);
@@ -140,7 +154,8 @@ bool TuringProbe::start(IOService *provider) {
            pciDevice_->getFunctionNumber(), identity.vendor, identity.device,
            identity.subsystemVendor, identity.subsystemDevice,
            topRequested ? "BAR0 identity+TOP inventory" :
-           (mmioRequested ? "BAR0 identity whitelist" : "PCI only"));
+           (fbMmuRequested ? "BAR0 identity+FB/MMU profile" :
+           (mmioRequested ? "BAR0 identity whitelist" : "PCI only")));
     return true;
 }
 

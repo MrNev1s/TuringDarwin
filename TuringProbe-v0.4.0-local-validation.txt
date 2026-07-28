@@ -1,0 +1,37 @@
+TuringProbe v0.4.0 LOCAL SOURCE VALIDATION
+Date: 2026-07-29
+
+STATUS: SOURCE IMPLEMENTED; NOT BUILT; NOT BOOTED
+
+Scope:
+- exact target 10DE:2182 / 1043:8854
+- new mode: -tdprobe -tdmmio-read -tdfb-read
+- dedicated compile gates: TURINGPROBE_ENABLE_MMIO_READ=1 and TURINGPROBE_ENABLE_FB_READ=1
+- 3 verified identity reads plus exactly one new 32-bit read at BAR0+0x100CE0
+- 4 total MMIO reads in FB mode
+- MMU profile is source metadata; zero MMU hardware-register reads
+
+Syntax/format checks:
+- plist parse: PASS
+- Xcode project textual sanity: PASS
+- shell syntax: PASS
+- Python syntax: PASS
+
+Contract checks:
+SAFETY AUDIT PASSED: v0.4.0 keeps verified modes and adds one 0x100CE0 FB read
+decoder contract passed: TU116 ReBAR entry0 = BAR0, 16 MiB, 3 entries
+MMIO CONTRACT PASSED: read-only map, explicit release, identity gate, optional TOP or one-register FB inventory
+TOP CONTRACT PASSED: fixed 64-dword table, bounded parser, Nouveau bitfields verified
+FB/MMU CONTRACT PASSED: one 0x100CE0 read, 6 GiB decoder, source-only MMU profile
+
+Static source assertions:
+- one FB accessor and one call site: PASS
+- read-only map and explicit release: PASS
+- TOP/FB mode mutual exclusion: PASS
+- forbidden write/DMA/power/user-client tokens: PASS
+
+Proof boundary:
+- No Xcode build claim.
+- No Mach-O/binary audit claim.
+- No real-hardware v0.4.0 claim.
+- Keep verified v0.3.0 and -tdprobe until artifact audit.

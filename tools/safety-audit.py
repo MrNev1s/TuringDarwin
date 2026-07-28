@@ -9,7 +9,9 @@ MMIO_CPP = Path("kext/TuringProbe/MMIOReadOnly.cpp")
 MMIO_HPP = Path("kext/TuringProbe/MMIOReadOnly.hpp")
 TOP_CPP = Path("kext/TuringProbe/TopInventory.cpp")
 TOP_HPP = Path("kext/TuringProbe/TopInventory.hpp")
-MMIO_ALLOWED_FILES = {MMIO_CPP, MMIO_HPP, TOP_CPP, TOP_HPP}
+FB_CPP = Path("kext/TuringProbe/FbMmuInventory.cpp")
+FB_HPP = Path("kext/TuringProbe/FbMmuInventory.hpp")
+MMIO_ALLOWED_FILES = {MMIO_CPP, MMIO_HPP, TOP_CPP, TOP_HPP, FB_CPP, FB_HPP}
 
 GLOBALLY_FORBIDDEN = {
     r"\bconfigWrite(?:8|16|32)\b": "PCI configuration write",
@@ -26,8 +28,8 @@ GLOBALLY_FORBIDDEN = {
     r"\bIODMACommand\b": "DMA command",
     r"\bIOBufferMemoryDescriptor\b": "buffer suitable for later DMA",
     r"\bIOUserClient\b": "user client surface",
-    r"\bIOCommandGate\b": "command gate not authorised in v0.3",
-    r"\bIOWorkLoop\b": "work loop not authorised in v0.3",
+    r"\bIOCommandGate\b": "command gate not authorised in v0.4",
+    r"\bIOWorkLoop\b": "work loop not authorised in v0.4",
     r"\bioWrite(?:8|16|32)\b": "I/O-space write",
     r"\bIOMappedWrite(?:8|16|32|64)\b": "mapped MMIO write",
     r"\bOSWrite(?:Little|Big)Int(?:8|16|32|64)\b": "memory write primitive",
@@ -131,6 +133,29 @@ else:
     if re.search(r"\bvolatile\b", top):
         errors.append(f"{TOP_CPP}: no direct volatile pointer is allowed")
 
+fb = texts.get(FB_CPP, "")
+if not fb:
+    errors.append(f"{FB_CPP}: missing FB/MMU inventory module")
+else:
+    if len(re.findall(r"\bOSReadLittleInt32\s*\(", fb)) != 1:
+        errors.append(f"{FB_CPP}: exactly one FB OSReadLittleInt32 accessor is required")
+    if len(re.findall(r"\breadFbCapacity32\s*\(", fb)) != 2:
+        errors.append(f"{FB_CPP}: FB accessor must have one definition and one call site")
+    if re.search(r"\b(?:for|while|do)\s*(?:\(|\{)", fb):
+        errors.append(f"{FB_CPP}: FB/MMU module must contain no loops or polling")
+    if re.search(r"\bvolatile\b", fb):
+        errors.append(f"{FB_CPP}: no direct volatile pointer is allowed")
+    if "kNvPfbVidmemSizeOffset" not in fb:
+        errors.append(f"{FB_CPP}: source-backed 0x100CE0 register constant missing")
+    if "kExpectedTargetVidmemBytes" not in fb:
+        errors.append(f"{FB_CPP}: exact 6 GiB target validation missing")
+    if "TPMMUSourceProfile" not in fb:
+        errors.append(f"{FB_CPP}: source-backed MMU metadata must be clearly labelled")
+    if "TURINGPROBE_ENABLE_FB_READ" not in fb:
+        errors.append(f"{FB_CPP}: dedicated compile-time FB read gate missing")
+    if 'TPFBInventoryCompileGateEnabled' not in fb:
+        errors.append(f"{FB_CPP}: compile-gate telemetry missing")
+
 registers = texts.get(Path("include/TuringRegisters.hpp"), "")
 expected_constants = {
     "kNvPmcBoot0Offset": 0x000000,
@@ -138,31 +163,57 @@ expected_constants = {
     "kNvPextdevBoot0StrapOffset": 0x101000,
     "kTopTableBaseOffset": 0x022700,
     "kTopTableWordCount": 64,
+    "kNvPfbVidmemSizeOffset": 0x100CE0,
+    "kFbMmuInventoryMmioReadCount": 1,
+    "kTu102MmuDmaBits": 47,
+    "kTu102MmuKindCount": 16,
+    "kTu102MmuInvalidKind": 0x07,
+    "kTu102DefaultBigPageKiB": 16,
 }
 for name, expected in expected_constants.items():
     match = re.search(rf"constexpr\s+UInt32\s+{name}\s*=\s*(0x[0-9A-Fa-f]+|[0-9]+)U", registers)
     if not match or int(match.group(1), 0) != expected:
         errors.append(f"include/TuringRegisters.hpp: {name} must equal {expected:#x}")
-if "kExpandedMmioReadCount == 67U" not in registers:
-    errors.append("include/TuringRegisters.hpp: expanded read count must be statically fixed at 67")
+if "kExpandedTopMmioReadCount == 67U" not in registers:
+    errors.append("include/TuringRegisters.hpp: TOP expanded read count must be fixed at 67")
+if "kExpandedFbMmuMmioReadCount == 4U" not in registers:
+    errors.append("include/TuringRegisters.hpp: FB/MMU expanded read count must be fixed at 4")
 
 main = texts.get(Path("kext/TuringProbe/TuringProbe.cpp"), "")
 if 'bootArgumentPresent("-tdtop-read")' not in main:
     errors.append("TuringProbe.cpp: -tdtop-read gate missing")
+if 'bootArgumentPresent("-tdfb-read")' not in main:
+    errors.append("TuringProbe.cpp: -tdfb-read gate missing")
 if "topRequested && !mmioRequested" not in main:
     errors.append("TuringProbe.cpp: -tdtop-read must require -tdmmio-read")
+if "fbMmuRequested && !mmioRequested" not in main:
+    errors.append("TuringProbe.cpp: -tdfb-read must require -tdmmio-read")
+if "topRequested && fbMmuRequested" not in main:
+    errors.append("TuringProbe.cpp: TOP and FB modes must be mutually exclusive")
 
 pbx = (ROOT / "TuringProbe.xcodeproj/project.pbxproj").read_text(encoding="utf-8")
 if pbx.count("TURINGPROBE_ENABLE_MMIO_READ=1") != 2:
     errors.append("project.pbxproj: Debug and Release must enable compile-time MMIO gate")
+if pbx.count("TURINGPROBE_ENABLE_FB_READ=1") != 2:
+    errors.append("project.pbxproj: Debug and Release must enable dedicated FB read gate")
 if "TopInventory.cpp" not in pbx or "TopInventory.hpp" not in pbx:
     errors.append("project.pbxproj: TOP inventory module is not included")
-if pbx.count("MODULE_VERSION = 0.3.0") != 2:
-    errors.append("project.pbxproj: module version must be 0.3.0 in both configurations")
+if "FbMmuInventory.cpp" not in pbx or "FbMmuInventory.hpp" not in pbx:
+    errors.append("project.pbxproj: FB/MMU inventory module is not included")
+if pbx.count("MODULE_VERSION = 0.4.0") != 2:
+    errors.append("project.pbxproj: module version must be 0.4.0 in both configurations")
+
+build_sh = (ROOT / "tools/build.sh").read_text(encoding="utf-8")
+if 'turingprobe_version=0.4.0' not in build_sh:
+    errors.append("tools/build.sh: manifest version must be 0.4.0")
+if 'mmio_fb_inventory=1x32@0x100ce0' not in build_sh:
+    errors.append("tools/build.sh: FB inventory manifest entry missing")
+if 'fb_compile_gate=TURINGPROBE_ENABLE_FB_READ=1' not in build_sh:
+    errors.append("tools/build.sh: dedicated FB compile gate manifest entry missing")
 
 if errors:
     print("SAFETY AUDIT FAILED", file=sys.stderr)
     print("\n".join(errors), file=sys.stderr)
     raise SystemExit(1)
 
-print("SAFETY AUDIT PASSED: v0.3.0 allows 3 identity reads plus one fixed 64-dword TOP inventory")
+print("SAFETY AUDIT PASSED: v0.4.0 keeps verified modes and adds one 0x100CE0 FB read")

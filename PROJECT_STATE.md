@@ -1,10 +1,10 @@
 # TuringDarwin — Canonical Project State
 
-**State version:** 4  
+**State version:** 11  
 **Updated:** 2026-07-29  
 **Repository:** `MrNev1s/TuringDarwin`  
-**Current real-hardware-verified component:** `TuringProbe.kext 0.1.1`  
-**Current source candidate:** `TuringProbe.kext 0.2.1`
+**Current real-hardware-verified component:** `TuringProbe.kext 0.3.0`  
+**Current source candidate:** `TuringProbe.kext 0.4.0`
 
 This file is the authoritative hand-off. Claims use these labels:
 
@@ -216,28 +216,201 @@ minimal whitelist. Before any new hardware boot it must:
 
 Return the test EFI to `-tdprobe` only while this next design is prepared.
 
+## 10. TuringProbe 0.3.0 artifact status
 
-## 10. TuringProbe 0.3.0 candidate
+**[OFFLINE VERIFIED; PCI-ONLY HARDWARE BOOT AUTHORISED]**
 
-**[SOURCE IMPLEMENTED + LOCAL AUDIT PASS; NOT XCODE-BUILT; NOT HARDWARE-AUTHORISED]**
+Build provenance:
 
-The candidate preserves all 0.2.1 identity reads and adds an optional bounded
-PTOP inventory selected by `-tdtop-read`. TU116 uses Nouveau's
-`gk104_top_parse`, which reads exactly 64 dwords at `0x022700..0x0227fc`.
-Expanded mode therefore contains exactly 67 MMIO reads: 3 identity + 64 TOP.
+- source commit `ce0a12459e31f3d4b8b2e948207ab7a142de0207`;
+- Xcode 16.2, macOS SDK 15.2, x86_64;
+- MacKernelSDK `05094e5e88cec7caedbfb35e8449ed0db94bf95b`;
+- `BUILD SUCCEEDED`;
+- Mach-O UUID `34E1451B-891E-36BB-BA88-5D5B60A37431`;
+- outer artifact SHA-256 `36f9d3f598ccf75c50e019e5a69224156ec9bec3e943414dbe9859f131080418`;
+- inner kext ZIP SHA-256 `2272673c66d11560893a6da65ae0e03058d6b9b0b4a2733f653b69f997867694`;
+- executable SHA-256 `3ec68a887f8655d91e5f1490ce8b40adb4244b76c6907d9602948645d7829745`;
+- built `Info.plist` SHA-256 `f40cdf7fb7a2b6574669ad0c25890dd6effe84fd2d6c625bb079a73fa49d7acb`.
 
-Safety properties:
+Binary audit result: **PASS**.
 
-- one `kIOMapReadOnly` BAR0 mapping;
-- explicit `IOMemoryMap::release()`;
-- fixed compile-time table base and count;
-- one finite 64-iteration loop, no polling;
-- no PCI/MMIO writes, DMA, interrupts, firmware, reset, power/clock/fan/voltage
-  control, FIFO/channels/Copy Engine commands, display programming or user
-  client;
-- `-tdtop-read` fails closed unless `-tdmmio-read` is also present;
-- `-tdunsafe` remains rejected.
+Confirmed in the compiled artifact:
 
-Next gate: GitHub Actions build and Mach-O call-site audit. The first hardware
-boot of the built 0.3.0 artifact must be PCI-only; expanded TOP MMIO remains
-blocked until that compatibility boot passes.
+- exact PCI/subsystem matching remains unchanged;
+- `-tdtop-read` requires `-tdmmio-read`;
+- three identity reads remain fixed;
+- the optional TOP path uses one bounded 64-iteration loop;
+- each TOP offset is `0x022700 + index * 4`, ending at `0x0227FC`;
+- the mapping release path remains present;
+- no direct PCI/MMIO write, DMA, interrupt, power, user-client, or bus-master
+  enable call site was found.
+
+Nouveau's `gk104_top_parse` source uses the same fixed 64-dword table and
+bitfields. Unknown engine types remain raw/UNKNOWN rather than guessed.
+
+Non-blocking artifact metadata defect:
+
+- `build-Debug.manifest.txt` incorrectly reports `turingprobe_version=0.2.1`;
+- it also reports only the old three-register whitelist;
+- the compiled `Info.plist`, strings, symbols, and disassembly confirm actual
+  version 0.3.0 and the PTOP path;
+- `tools/build.sh` must be corrected before the next release.
+
+The artifact is authorised only for a PCI-only compatibility boot with
+`-tdprobe`. Neither `-tdmmio-read` nor `-tdtop-read` is authorised until the
+PCI-only result is reviewed.
+
+## 11. TuringProbe 0.3.0 PCI-only hardware acceptance
+
+**[REAL-HARDWARE VERIFIED — PASS]**
+
+- macOS 15.7.7 / build 24G720;
+- kext `0.3.0`, UUID `34E1451B-891E-36BB-BA88-5D5B60A37431`;
+- service registered, matched, active, busy 0;
+- boot mode `-tdprobe`;
+- `TuringProbeMMIOAccess = No`;
+- `TuringProbeTopInventoryAccess = No`;
+- PCI Command remained `0x0003`;
+- Bus Master remained disabled;
+- probe completed successfully;
+- GOP remained 1920x1080 ARGB8888;
+- runtime log ZIP SHA-256 `e89bcf73c342667d683fcf74b9b8ca8a7382fb8487f559c8b0badd542a629124`.
+
+This closes the v0.3.0 PCI-only compatibility gate.
+
+The next authorised experiment is one identity-only BAR0 boot with
+`-tdprobe -tdmmio-read`. `-tdtop-read` remains prohibited until the identity
+result is reviewed. No new offsets and no write path are authorised.
+
+
+
+## 12. TuringProbe 0.3.0 identity-only hardware gate
+
+**[REAL-HW VERIFIED — PASS]**
+
+- macOS 15.7.7 / build 24G720;
+- version 0.3.0, UUID `34E1451B-891E-36BB-BA88-5D5B60A37431`;
+- boot mode `-tdprobe -tdmmio-read`;
+- BAR0 read-only mapping created and explicitly released;
+- mapping not retained after probe;
+- exactly three identity reads completed;
+- no PTOP access: requested No, completed No, TOP read count 0;
+- `NV_PMC_BOOT_0 = 0x168000A1`;
+- chipset TU116 `0x168`, revision `0xA1`;
+- strap `0x00400080`, crystal 27 MHz;
+- PCI Command remained `0x0003`;
+- Bus Master remained disabled;
+- GOP remained 1920×1080 ARGB8888;
+- runtime log ZIP SHA-256 `e5a6476a06c9d30981c1377763c1b578a6562388f1ac86859de97540d3f27317`.
+
+One controlled PTOP read-only hardware boot is now authorised with exactly
+`-tdprobe -tdmmio-read -tdtop-read`. No additional offsets and no write path
+are authorised. A failed TOP boot must not be retried.
+
+
+## 13. TuringProbe 0.3.0 PTOP hardware inventory
+
+**[REAL-HARDWARE VERIFIED — PASS]**
+
+- boot mode `-tdprobe -tdmmio-read -tdtop-read`;
+- read-only BAR0 mapping created and explicitly released;
+- mapping not retained after probe;
+- 3 identity reads plus exactly 64 PTOP reads;
+- PTOP range `0x022700..0x0227FC`;
+- total MMIO read count 67;
+- 34 invalid/empty words, 10 DATA words, 10 ENUM words and 10 ENGINE_TYPE words;
+- 10 devices decoded;
+- 10 known types, 0 unknown types, 0 malformed records;
+- `TPTopDecodeValid = Yes`;
+- PCI Command remained `0x0003`;
+- Bus Master remained disabled;
+- GOP remained 1920×1080 ARGB8888;
+- runtime log ZIP SHA-256 `1f91f1c51b0659a55ab0190c242d5210ed8823d2c7876dfaf96cc376c783629a`.
+
+Confirmed PTOP inventory:
+
+| Block | Instance | Address | Engine | Runlist | IRQ | Reset | Fault |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| GR | 0 | `0x400000` | 0 | 0 | 12 | 12 | 64 |
+| CE | 0 | `0x104000` | 11 | 0 | 5 | 6 | 15 |
+| CE | 1 | `0x104000` | 12 | 0 | 6 | 7 | 16 |
+| CE | 2 | `0x104000` | 8 | 8 | 7 | 21 | 17 |
+| CE | 3 | `0x104000` | 9 | 9 | 10 | 22 | 18 |
+| CE | 4 | `0x104000` | 10 | 10 | 11 | 23 | 19 |
+| NVDEC | 0 | `0x830000` | 1 | 1 | 17 | 15 | 10 |
+| SEC2 | 0 | `0x087000` | 3 | 3 | 15 | 14 | 14 |
+| NVENC | 0 | `0x1C8000` | 2 | 2 | 16 | 18 | 11 |
+| GSP | 0 | `0x110000` | — | — | 27 | — | 2 |
+
+This closes the initial PTOP topology milestone. The entries prove that the
+blocks are advertised by hardware; they do not prove initialisation, firmware,
+scheduling, or command-submission readiness.
+
+### Next gate
+
+**[DESIGN/RESEARCH ONLY — NO NEW HARDWARE ACCESS AUTHORISED]**
+
+The next candidate milestone is a new minimal read-only FB/MMU capability
+inventory. Every proposed offset must first be justified from primary Nouveau,
+NVIDIA open-kernel or envytools sources and excluded if it can acknowledge,
+clear, pop, trigger, select an indexed window or otherwise have read side
+effects.
+
+Until that review is complete, return the test EFI to `-tdprobe` only.
+No new MMIO offsets and no write path are authorised.
+
+
+## 14. TuringProbe 0.4.0 FB/MMU source candidate
+
+**[SOURCE IMPLEMENTED, NOT BUILT, NOT AUTHORISED FOR HARDWARE]**
+
+Version 0.4.0 preserves every verified 0.3.0 mode and adds one isolated mode:
+
+```text
+-tdprobe -tdmmio-read -tdfb-read
+```
+
+The mode performs the three verified identity reads and exactly one new 32-bit
+read at BAR0 offset `0x100CE0`. TU102/TU116 uses Nouveau's
+`gp102_fb_vidmem_size()` decoder for this register:
+
+- magnitude mask `0x000003F0`, shift 4;
+- scale mask `0x0000000F`;
+- nominal bytes `magnitude << (scale + 20)`;
+- bit `0x40000000` applies a 15/16 reduction.
+
+The exact target gate accepts only a valid result of 6 GiB. Any other value
+causes the mapping to be released and attachment to fail.
+
+The candidate also publishes a clearly source-labelled TU102 MMU profile with
+no additional MMIO reads: 47-bit DMA addressing, GF100 MMU/memory classes,
+GP100 VMM class, a 16-entry kind map with invalid kind `0x07`, system-memory
+kinds, and 16 KiB default big pages.
+
+Safety constraints:
+
+- dedicated compile-time gate `TURINGPROBE_ENABLE_FB_READ=1`;
+- `-tdfb-read` requires `-tdmmio-read`;
+- simultaneous `-tdtop-read` and `-tdfb-read` is rejected;
+- one new read, no loops or polling;
+- `kIOMapReadOnly`, explicit release and pointer clear remain mandatory;
+- PCI Command and Bus Master invariants remain mandatory;
+- no new write, DMA, interrupt, firmware, reset, power, FIFO, channel, engine,
+  display or user-client path exists.
+
+Local source gates passed:
+
+- safety audit;
+- ReBAR decoder contract;
+- MMIO ownership/boot-policy contract;
+- bounded PTOP contract;
+- FB/MMU one-register decoder contract.
+
+The stale 0.3.0 build-manifest version/whitelist defect has been corrected in
+`tools/build.sh`.
+
+### Next gate
+
+Build 0.4.0 with GitHub Actions, upload the complete artifact, and audit the
+compiled Mach-O. Until that audit passes, keep the verified 0.3.0 kext and
+`-tdprobe` only. No 0.4.0 hardware boot or `-tdfb-read` use is authorised.

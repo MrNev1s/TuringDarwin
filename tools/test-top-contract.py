@@ -8,7 +8,7 @@ top = (ROOT / "kext/TuringProbe/TopInventory.cpp").read_text(encoding="utf-8")
 
 assert re.search(r"kTopTableBaseOffset\s*=\s*0x022700U", registers)
 assert re.search(r"kTopTableWordCount\s*=\s*64U", registers)
-assert "kExpandedMmioReadCount == 67U" in registers
+assert "kExpandedTopMmioReadCount == 67U" in registers
 assert top.count("OSReadLittleInt32(") == 1
 assert top.count("readTopWord32(bar0, index)") == 1
 assert len(re.findall(r"for\s*\(", top)) == 1

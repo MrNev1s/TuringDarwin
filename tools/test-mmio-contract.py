@@ -26,14 +26,18 @@ assert "auto mapping =" not in mmio
 assert "OSPtr<IOMemoryMap>" not in mmio
 assert mmio.count("readWhitelisted32(bar0,") == 3
 assert "performReadOnlyTopInventory(bar0, owner)" in mmio
+assert "performReadOnlyFbMmuInventory(bar0, owner)" in mmio
 assert "configWrite" not in mmio
 assert "IOMappedWrite" not in mmio
 assert "OSWrite" not in mmio
-assert "-tdprobe" in main and "-tdmmio-read" in main and "-tdtop-read" in main
+assert all(arg in main for arg in ["-tdprobe", "-tdmmio-read", "-tdtop-read", "-tdfb-read"])
 assert "topRequested && !mmioRequested" in main
+assert "fbMmuRequested && !mmioRequested" in main
+assert "topRequested && fbMmuRequested" in main
 assert "-tdunsafe" in main
 assert pbx.count("TURINGPROBE_ENABLE_MMIO_READ=1") == 2
-assert pbx.count("MODULE_VERSION = 0.3.0") == 2
+assert "FbMmuInventory.cpp" in pbx and "FbMmuInventory.hpp" in pbx
+assert pbx.count("MODULE_VERSION = 0.4.0") == 2
 
 boot0 = 0x168000A1
 chipset = (boot0 & 0x1FF00000) >> 20
@@ -49,4 +53,4 @@ crystals = {
 }
 assert crystals[0x00400000] == 27000
 
-print("MMIO CONTRACT PASSED: read-only map, explicit release, identity gate, optional bounded TOP inventory")
+print("MMIO CONTRACT PASSED: read-only map, explicit release, identity gate, optional TOP or one-register FB inventory")

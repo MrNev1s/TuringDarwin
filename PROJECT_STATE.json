@@ -1,9 +1,9 @@
 {
-  "schema_version": 7,
+  "schema_version": 11,
   "updated": "2026-07-29",
   "repository": "MrNev1s/TuringDarwin",
-  "verified_runtime_version": "0.2.1-mmio-read-only",
-  "development_version": "0.2.1",
+  "verified_runtime_version": "0.3.0-top-read-only",
+  "development_version": "0.4.0",
   "target": {
     "bdf": "01:00.0",
     "vendor_id": "10DE",
@@ -23,9 +23,9 @@
     "resolution": "1920x1080",
     "command_register": 3,
     "bus_master_enabled": false,
-    "kext_version": "0.2.1",
-    "kext_uuid": "66D01C7F-5AD6-3EB7-8D98-B839F0733E99",
-    "boot_mode": "-tdprobe -tdmmio-read",
+    "kext_version": "0.3.0",
+    "kext_uuid": "34E1451B-891E-36BB-BA88-5D5B60A37431",
+    "boot_mode": "-tdprobe -tdmmio-read -tdtop-read",
     "mmio_access": true,
     "pci_only_0_2_1_pass": true,
     "pci_only_log_zip_sha256": "b6ad39324a6c75953fb4bff164545c01c1129fdacf2115a8c133fd9135d4d559",
@@ -60,7 +60,32 @@
     "bus_master_before_bar0_map": false,
     "bus_master_after_bar0_map": false,
     "bus_master_after_mmio_reads": false,
-    "bus_master_after_probe": false
+    "bus_master_after_probe": false,
+    "top_inventory_access": true,
+    "pci_only_0_3_0_pass": true,
+    "pci_only_0_3_0_log_zip_sha256": "e89bcf73c342667d683fcf74b9b8ca8a7382fb8487f559c8b0badd542a629124",
+    "identity_read_count": 3,
+    "top_read_count": 64,
+    "total_mmio_read_count": 67,
+    "identity_log_zip_sha256": "e5a6476a06c9d30981c1377763c1b578a6562388f1ac86859de97540d3f27317",
+    "chipset": "0x168",
+    "chip_revision": "0xA1",
+    "crystal_khz": 27000,
+    "command_before_probe": 3,
+    "command_unchanged": true,
+    "top_table_base": "0x022700",
+    "top_table_last": "0x0227FC",
+    "top_decode_valid": true,
+    "top_decoded_device_count": 10,
+    "top_known_device_count": 10,
+    "top_unknown_device_count": 0,
+    "top_malformed_record_count": 0,
+    "top_not_valid_word_count": 34,
+    "top_data_word_count": 10,
+    "top_enum_word_count": 10,
+    "top_engine_type_word_count": 10,
+    "top_log_zip_sha256": "1f91f1c51b0659a55ab0190c242d5210ed8823d2c7876dfaf96cc376c783629a",
+    "display": "1920x1080 ARGB8888, online/main"
   },
   "bars": [
     {
@@ -192,10 +217,10 @@
       "user_client": false
     }
   },
-  "next_gate": "Build 0.3.0 in GitHub Actions, audit Mach-O, then perform PCI-only compatibility boot",
-  "current_stage": "TuringProbe 0.3.0 bounded PTOP inventory source implemented; awaiting Xcode build and binary audit",
-  "candidate_version": "0.3.0",
-  "candidate_status": "source-implemented-local-audit-pass-not-built-not-hardware-authorized",
+  "next_gate": "Build 0.4.0 in GitHub Actions and perform full Mach-O audit; no hardware boot authorised",
+  "current_stage": "TuringProbe 0.4.0 one-register FB capacity and source-only MMU profile implemented; build artifact pending",
+  "candidate_version": "0.4.0",
+  "candidate_status": "source-implemented-not-built",
   "candidate_mmio": {
     "bar": 0,
     "mapping": "kIOMapReadOnly, explicit IOMemoryMap pointer, mandatory release and nullptr clear",
@@ -258,41 +283,175 @@
     }
   ],
   "candidate_artifact": {
-    "version": "0.2.1",
-    "source_commit": "76060d350cc1b58069f6138c5df517857e511059",
-    "build_result": "success",
-    "xcode": "16.2",
-    "sdk": "15.2",
-    "mac_kernel_sdk_commit": "05094e5e88cec7caedbfb35e8449ed0db94bf95b",
-    "architecture": "x86_64",
-    "macho_uuid": "66D01C7F-5AD6-3EB7-8D98-B839F0733E99",
-    "outer_zip_sha256": "123cc915fa6be6dd002128fbc9fe74197d08e9a5838b436b2987aff9c59e095a",
-    "kext_zip_sha256": "a409b524bc4100e77e4c3ee2cd9bff23e8a5336ef8a990df9755238c89515938",
-    "binary_sha256": "306faf22895d2abc80f11ec1cdc29e22f96185f9a0bb25fb2e9af2ea74938c44",
-    "info_plist_sha256": "6c5b511b1998425337ddf876e5844db24e7122b6bdda27a917e6a36e822d7270",
-    "binary_audit": "pass",
-    "mapping_release_confirmed": true,
-    "hardware_booted": true,
-    "authorized_boot_mode": "-tdprobe -tdmmio-read (one controlled boot)",
-    "blocked_boot_mode": "-tdunsafe or any unreviewed mode",
-    "hardware_boot_mode_verified": "-tdprobe"
+    "version": "0.4.0",
+    "build_result": "not-built",
+    "hardware_booted": false,
+    "authorized_boot_mode": null,
+    "blocked_boot_modes": [
+      "all 0.4.0 hardware modes until artifact audit",
+      "-tdunsafe"
+    ],
+    "expected_artifact": "TuringProbe-v0.4.0-Debug-x86_64"
   },
-  "candidate_top_inventory": {
-    "boot_arg": "-tdtop-read",
+  "candidate_top": {
+    "status": "hardware-verified-pass",
+    "writes_authorized": false,
+    "additional_offsets_authorized": false,
+    "command_submission_authorized": false,
+    "engine_initialization_proven": false
+  },
+  "verified_topology": [
+    {
+      "name": "GR",
+      "instance": 0,
+      "address": "0x400000",
+      "engine": 0,
+      "runlist": 0,
+      "interrupt": 12,
+      "reset": 12,
+      "fault": 64
+    },
+    {
+      "name": "CE",
+      "instance": 0,
+      "address": "0x104000",
+      "engine": 11,
+      "runlist": 0,
+      "interrupt": 5,
+      "reset": 6,
+      "fault": 15
+    },
+    {
+      "name": "CE",
+      "instance": 1,
+      "address": "0x104000",
+      "engine": 12,
+      "runlist": 0,
+      "interrupt": 6,
+      "reset": 7,
+      "fault": 16
+    },
+    {
+      "name": "CE",
+      "instance": 2,
+      "address": "0x104000",
+      "engine": 8,
+      "runlist": 8,
+      "interrupt": 7,
+      "reset": 21,
+      "fault": 17
+    },
+    {
+      "name": "CE",
+      "instance": 3,
+      "address": "0x104000",
+      "engine": 9,
+      "runlist": 9,
+      "interrupt": 10,
+      "reset": 22,
+      "fault": 18
+    },
+    {
+      "name": "CE",
+      "instance": 4,
+      "address": "0x104000",
+      "engine": 10,
+      "runlist": 10,
+      "interrupt": 11,
+      "reset": 23,
+      "fault": 19
+    },
+    {
+      "name": "NVDEC",
+      "instance": 0,
+      "address": "0x830000",
+      "engine": 1,
+      "runlist": 1,
+      "interrupt": 17,
+      "reset": 15,
+      "fault": 10
+    },
+    {
+      "name": "SEC2",
+      "instance": 0,
+      "address": "0x087000",
+      "engine": 3,
+      "runlist": 3,
+      "interrupt": 15,
+      "reset": 14,
+      "fault": 14
+    },
+    {
+      "name": "NVENC",
+      "instance": 0,
+      "address": "0x1C8000",
+      "engine": 2,
+      "runlist": 2,
+      "interrupt": 16,
+      "reset": 18,
+      "fault": 11
+    },
+    {
+      "name": "GSP",
+      "instance": 0,
+      "address": "0x110000",
+      "engine": null,
+      "runlist": null,
+      "interrupt": 27,
+      "reset": null,
+      "fault": 2
+    }
+  ],
+  "candidate_fb_mmu": {
+    "status": "source-implemented-not-built",
+    "boot_arg": "-tdfb-read",
     "requires": [
       "-tdprobe",
       "-tdmmio-read"
     ],
-    "bar0_base_offset": "0x022700",
-    "word_count": 64,
-    "byte_length": 256,
-    "expanded_total_mmio_reads": 67,
-    "source_model": "Linux Nouveau gk104_top_parse",
-    "source_implemented": true,
-    "local_audit_pass": true,
-    "xcode_built": false,
-    "binary_audited": false,
+    "mutually_exclusive_with": [
+      "-tdtop-read"
+    ],
+    "bar": 0,
+    "identity_read_count": 3,
+    "new_hardware_reads": [
+      {
+        "offset": "0x100CE0",
+        "width_bits": 32,
+        "count": 1,
+        "source": "Linux Nouveau gp102_fb_vidmem_size used by TU102/TU116",
+        "purpose": "encoded physical VRAM capacity"
+      }
+    ],
+    "total_read_count": 4,
+    "expected_decoded_bytes": 6442450944,
+    "decoder": {
+      "magnitude_mask": "0x000003F0",
+      "magnitude_shift": 4,
+      "scale_mask": "0x0000000F",
+      "reduced_capacity_bit": "0x40000000",
+      "formula": "magnitude << (scale + 20), optional 15/16 reduction"
+    },
+    "mmu_source_profile": {
+      "hardware_reads": 0,
+      "dma_bits": 47,
+      "kind_count": 16,
+      "invalid_kind": "0x07",
+      "kind_system_memory": true,
+      "mmu_class": "NVIF_CLASS_MMU_GF100",
+      "memory_class": "NVIF_CLASS_MEM_GF100",
+      "vmm_class": "NVIF_CLASS_VMM_GP100",
+      "default_big_page_kib": 16
+    },
+    "mapping": "kIOMapReadOnly with explicit release and pointer clear",
+    "writes": 0,
+    "polling": false,
+    "dma": false,
+    "interrupts": false,
+    "firmware": false,
+    "power_changes": false,
+    "user_client": false,
     "hardware_authorized": false,
-    "writes_authorized": false
+    "compile_gate": "TURINGPROBE_ENABLE_FB_READ=1"
   }
 }

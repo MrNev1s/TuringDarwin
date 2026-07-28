@@ -1,9 +1,7 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "updated": "2026-07-29",
-  "repository": "MrNev1s/TuringDarwin",
-  "verified_runtime_version": "0.1.1",
-  "development_version": "0.2.1",
+  "project": "TuringDarwin",
   "target": {
     "bdf": "01:00.0",
     "vendor_id": "10DE",
@@ -14,204 +12,38 @@
     "class_code": "030000",
     "acpi_path": "_SB_.PC00.PEG1.PEGP"
   },
-  "runtime": {
-    "macos": "15.7.7",
-    "darwin_build": "24G720",
-    "kext_loaded": true,
-    "ioreg_active": true,
-    "gop_framebuffer_preserved": true,
-    "resolution": "1920x1080",
-    "command_register": 3,
-    "bus_master_enabled": false
-  },
-  "bars": [
-    {
-      "bar": 0,
-      "base": "0x80000000",
-      "length": 16777216,
-      "type": "mmio32-nonprefetchable"
-    },
-    {
-      "bar": 1,
-      "continuation": 2,
-      "base": "0x4000000000",
-      "length": 268435456,
-      "type": "mmio64-prefetchable"
-    },
-    {
-      "bar": 3,
-      "continuation": 4,
-      "base": "0x4010000000",
-      "length": 33554432,
-      "type": "mmio64-prefetchable"
-    },
-    {
-      "bar": 5,
-      "base": "0x5000",
-      "length": 128,
-      "type": "io"
-    },
-    {
-      "resource": "rom",
-      "base": "0x81000000",
-      "length": 524288
-    }
-  ],
-  "conventional_capabilities": [
-    {
-      "offset": "0x60",
-      "id": "0x01",
-      "name": "Power Management"
-    },
-    {
-      "offset": "0x68",
-      "id": "0x05",
-      "name": "MSI"
-    },
-    {
-      "offset": "0x78",
-      "id": "0x10",
-      "name": "PCI Express"
-    }
-  ],
-  "extended_capabilities": [
-    {
-      "offset": "0x100",
-      "id": "0x0002",
-      "name": "Virtual Channel"
-    },
-    {
-      "offset": "0x250",
-      "id": "0x0018",
-      "name": "Latency Tolerance Reporting"
-    },
-    {
-      "offset": "0x258",
-      "id": "0x001E",
-      "name": "L1 PM Substates"
-    },
-    {
-      "offset": "0x128",
-      "id": "0x0004",
-      "name": "Power Budgeting"
-    },
-    {
-      "offset": "0x420",
-      "id": "0x0001",
-      "name": "Advanced Error Reporting"
-    },
-    {
-      "offset": "0x600",
-      "id": "0x000B",
-      "name": "Vendor-Specific Extended Capability"
-    },
-    {
-      "offset": "0x900",
-      "id": "0x0019",
-      "name": "Secondary PCI Express"
-    },
-    {
-      "offset": "0xBB0",
-      "id": "0x0015",
-      "name": "Resizable BAR"
-    }
-  ],
-  "vbios": {
-    "file": "TU116(3).rom",
-    "size": 1047040,
-    "sha256": "4ea82dadeda06b347c0eca76d4bf41f0dc56e7a402452b00cb8c72b38b2e40b4",
-    "version": "90.16.48.40.1E",
-    "container": "NVGI",
-    "checksums_valid": true
-  },
-  "build": {
-    "xcode": "16.2",
-    "sdk": "15.2",
-    "mac_kernel_sdk_commit": "05094e5e88cec7caedbfb35e8449ed0db94bf95b",
-    "architecture": "x86_64",
-    "github_actions_build": 9,
-    "status": "success"
-  },
-  "safety": {
-    "pci_config_writes": false,
-    "mmio_access": false,
-    "dma_access": false,
-    "interrupt_access": false,
-    "firmware_access": false,
-    "power_state_changes": false,
-    "user_client": false
-  },
-  "next_gate": "GitHub Actions build and static binary audit of TuringProbe 0.2.1",
-  "analysis_date": "2026-07-29",
-  "inputs": {
-    "PC-DATA-20260723-121802(1).zip": "f0cce8af98c55871c9db6b3216e1aa8e83ef3d6a7542ab99b4c09c562416fd6a",
-    "EFI_STABLE.zip": "3539c4d40009a52df0d08ec15c060e005ca770cd66649180e16e68da529bdfe9",
-    "TU116(3).rom": "4ea82dadeda06b347c0eca76d4bf41f0dc56e7a402452b00cb8c72b38b2e40b4",
-    "TuringProbe-v0.1-logs.zip": "25dcb455f4727a331a83ee5bce5c26735b0c6e5c4059fd4c61bc844709c2fa20"
-  },
-  "candidate_version": "0.3.0",
-  "candidate_status": "source-implemented-locally-audited-not-built-not-booted",
-  "mmio_whitelist": [
-    "0x000004",
-    "0x000000",
-    "0x101000"
-  ],
-  "primary_sources": {
-    "nouveau": "linux nvkm/engine/device/base.c revision v6.19-rc8-185-g2687c848e578",
-    "xnu": "IOMemoryDescriptor.h revision 10063.121.3",
-    "mac_kernel_sdk": "05094e5e88cec7caedbfb35e8449ed0db94bf95b"
-  },
-  "runtime_0_1_1": {
+  "last_hardware_verified": {
+    "version": "0.3.0",
+    "stage": "bounded PTOP read-only inventory",
     "result": "PASS",
-    "command_before": 3,
-    "command_after": 3,
-    "bus_master_before": false,
-    "bus_master_after": false,
-    "mmio_access": false,
+    "topology_device_count": 10,
+    "mmio_read_count": 67,
+    "mmio_writes": 0,
+    "bus_master_enabled": false,
     "gop_preserved": true,
-    "logs_sha256": "3864fa4ebcb9a48c96f2140e38301d262ffa65fe6126cea5916ad4458135ed41"
+    "logs_sha256": "1f91f1c51b0659a55ab0190c242d5210ed8823d2c7876dfaf96cc376c783629a"
   },
-  "candidate_0_2_0": {
-    "build_status": "not-built",
-    "hardware_status": "not-tested",
-    "mapping": "IOMemoryDescriptor::map(kIOMapReadOnly), local lifetime",
-    "boot_args": [
-      "-tdprobe",
-      "-tdmmio-read"
+  "candidate": {
+    "version": "0.4.0",
+    "status": "source-implemented-locally-audited-not-built-not-booted",
+    "mode": "-tdprobe -tdmmio-read -tdfb-read",
+    "compile_gates": [
+      "TURINGPROBE_ENABLE_MMIO_READ=1",
+      "TURINGPROBE_ENABLE_FB_READ=1"
     ],
-    "whitelist": [
+    "new_hardware_reads": [
       {
-        "offset": "0x000004",
-        "name": "NV_PMC_BOOT_1",
-        "width_bits": 32,
-        "count": 1
-      },
-      {
-        "offset": "0x000000",
-        "name": "NV_PMC_BOOT_0",
-        "width_bits": 32,
-        "count": 1
-      },
-      {
-        "offset": "0x101000",
-        "name": "NV_PEXTDEV_BOOT_0_STRAP",
+        "bar": 0,
+        "offset": "0x100CE0",
         "width_bits": 32,
         "count": 1
       }
     ],
-    "pci_writes": 0,
-    "mmio_writes": 0,
-    "dma": false,
-    "interrupts": false,
-    "firmware": false,
-    "power_changes": false,
-    "user_client": false
+    "total_reads_in_mode": 4,
+    "expected_vram_bytes": 6442450944,
+    "mmu_hardware_reads": 0,
+    "writes": 0,
+    "hardware_authorized": false
   },
-  "top_inventory": {
-    "source": "Linux Nouveau gk104_top_parse",
-    "base": "0x022700",
-    "words": 64,
-    "reads_total_expanded": 67,
-    "status": "source-only-local-audit"
-  }
+  "proof_boundary": "Source and local contract verification only; no Xcode build or hardware claim for v0.4.0."
 }
