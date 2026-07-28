@@ -14,7 +14,7 @@ on:
       mac_kernel_sdk_ref:
         description: MacKernelSDK commit, tag, or branch (resolved SHA is recorded)
         required: true
-        default: master
+        default: 05094e5e88cec7caedbfb35e8449ed0db94bf95b
         type: string
   push:
     branches:
@@ -46,7 +46,7 @@ concurrency:
 env:
   XCODE_PATH: /Applications/Xcode_16.2.app/Contents/Developer
   DEFAULT_CONFIGURATION: Debug
-  DEFAULT_SDK_REF: master
+  DEFAULT_SDK_REF: 05094e5e88cec7caedbfb35e8449ed0db94bf95b
 
 jobs:
   build:
@@ -96,6 +96,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/safety-audit.py
+          python3 tools/test-decoder-contract.py
           plutil -lint kext/TuringProbe/Info.plist
           plutil -lint TuringProbe.xcodeproj/project.pbxproj
 
@@ -132,7 +133,7 @@ jobs:
           mkdir -p dist
           ditto -c -k --sequesterRsrc --keepParent \
             "build/$CONFIGURATION/TuringProbe.kext" \
-            "dist/TuringProbe-v0.1-$CONFIGURATION-x86_64.kext.zip"
+            "dist/TuringProbe-v0.1.1-$CONFIGURATION-x86_64.kext.zip"
           cp "build/build-$CONFIGURATION.manifest.txt" dist/
           cp "build/build-$CONFIGURATION.log" dist/
           shasum -a 256 dist/* | tee dist/SHA256SUMS.txt
@@ -140,7 +141,7 @@ jobs:
       - name: Upload TuringProbe artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TuringProbe-v0.1-${{ steps.build.outputs.configuration }}-x86_64
+          name: TuringProbe-v0.1.1-${{ steps.build.outputs.configuration }}-x86_64
           path: dist/
           if-no-files-found: error
           retention-days: 30
@@ -149,7 +150,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: TuringProbe-v0.1-failed-build-logs
+          name: TuringProbe-v0.1.1-failed-build-logs
           path: |
             build/*.log
             build/*.txt
