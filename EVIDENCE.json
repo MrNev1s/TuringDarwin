@@ -1,0 +1,34 @@
+{
+  "analysis_date": "2026-07-24",
+  "inputs": {
+    "PC-DATA-20260723-121802(1).zip": "f0cce8af98c55871c9db6b3216e1aa8e83ef3d6a7542ab99b4c09c562416fd6a",
+    "EFI_STABLE.zip": "3539c4d40009a52df0d08ec15c060e005ca770cd66649180e16e68da529bdfe9",
+    "TU116(3).rom": "4ea82dadeda06b347c0eca76d4bf41f0dc56e7a402452b00cb8c72b38b2e40b4",
+    "TuringDarwin-TuringProbe-v0.2-source.zip": "3e1f8332e252b310fa54db3699c2e60bca281ecba6cb35e5571bad8ddda8119f"
+  },
+  "target": {
+    "bdf": "01:00.0",
+    "vendor_id": "10DE",
+    "device_id": "2182",
+    "subsystem_vendor_id": "1043",
+    "subsystem_device_id": "8854",
+    "revision": "A1",
+    "class_code": "030000",
+    "acpi_path": "_SB_.PC00.PEG1.PEGP"
+  },
+  "vbios": {
+    "size_bytes": 1047040,
+    "container_magic": "NVGI",
+    "option_rom_chain_offsets": [165376, 656896],
+    "legacy_image_length": 61440,
+    "uefi_image_length": 69632,
+    "checksums_valid": true,
+    "version": "90.16.48.40.1E"
+  },
+  "build_status": {
+    "static_safety_audit": "passed",
+    "plist_parse": "passed",
+    "xcode_compile": "not_run",
+    "target_load": "not_run"
+  }
+}

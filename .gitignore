@@ -1,0 +1,6 @@
+.DS_Store
+DerivedData/
+build/
+MacKernelSDK/
+*.xcuserstate
+xcuserdata/

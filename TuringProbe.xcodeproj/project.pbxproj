@@ -1,0 +1,50 @@
+// !$*UTF8*$!
+{
+ archiveVersion = 1;
+ classes = {};
+ objectVersion = 50;
+ objects = {
+  A00000000000000000000001 = {isa = PBXBuildFile; fileRef = A00000000000000000000011; };
+  A00000000000000000000002 = {isa = PBXBuildFile; fileRef = A00000000000000000000012; };
+  A00000000000000000000003 = {isa = PBXBuildFile; fileRef = A00000000000000000000013; };
+  A00000000000000000000004 = {isa = PBXBuildFile; fileRef = A00000000000000000000014; };
+  A00000000000000000000005 = {isa = PBXBuildFile; fileRef = A00000000000000000000015; };
+  A00000000000000000000006 = {isa = PBXBuildFile; fileRef = A00000000000000000000016; };
+  A00000000000000000000007 = {isa = PBXBuildFile; fileRef = A00000000000000000000017; };
+  A00000000000000000000008 = {isa = PBXBuildFile; fileRef = A00000000000000000000018; };
+  A00000000000000000000009 = {isa = PBXBuildFile; fileRef = A00000000000000000000019; };
+  A0000000000000000000000A = {isa = PBXBuildFile; fileRef = A0000000000000000000001A; };
+  A0000000000000000000000B = {isa = PBXBuildFile; fileRef = A0000000000000000000001B; };
+  A0000000000000000000000C = {isa = PBXBuildFile; fileRef = A0000000000000000000001C; };
+  A00000000000000000000011 = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TuringProbe.cpp; sourceTree = "<group>"; };
+  A00000000000000000000012 = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = TuringProbe.hpp; sourceTree = "<group>"; };
+  A00000000000000000000013 = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PCIConfig.cpp; sourceTree = "<group>"; };
+  A00000000000000000000014 = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = PCIConfig.hpp; sourceTree = "<group>"; };
+  A00000000000000000000015 = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CapabilityParser.cpp; sourceTree = "<group>"; };
+  A00000000000000000000016 = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = CapabilityParser.hpp; sourceTree = "<group>"; };
+  A00000000000000000000017 = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = BARInspector.cpp; sourceTree = "<group>"; };
+  A00000000000000000000018 = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = BARInspector.hpp; sourceTree = "<group>"; };
+  A00000000000000000000019 = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Logging.hpp; sourceTree = "<group>"; };
+  A0000000000000000000001A = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+  A0000000000000000000001B = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = TuringDeviceIds.hpp; sourceTree = "<group>"; };
+  A0000000000000000000001C = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = TuringTypes.hpp; sourceTree = "<group>"; };
+  A0000000000000000000001D = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TuringProbe.kext; sourceTree = BUILT_PRODUCTS_DIR; };
+  A00000000000000000000020 = {isa = PBXGroup; children = (A00000000000000000000021,A00000000000000000000022,A00000000000000000000023,); sourceTree = "<group>"; };
+  A00000000000000000000021 = {isa = PBXGroup; children = (A00000000000000000000011,A00000000000000000000012,A00000000000000000000013,A00000000000000000000014,A00000000000000000000015,A00000000000000000000016,A00000000000000000000017,A00000000000000000000018,A00000000000000000000019,A0000000000000000000001A,); path = kext/TuringProbe; sourceTree = "<group>"; };
+  A00000000000000000000022 = {isa = PBXGroup; children = (A0000000000000000000001B,A0000000000000000000001C,); path = include; sourceTree = "<group>"; };
+  A00000000000000000000023 = {isa = PBXGroup; children = (A0000000000000000000001D,); name = Products; sourceTree = "<group>"; };
+  A00000000000000000000030 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000001,A00000000000000000000003,A00000000000000000000005,A00000000000000000000007,); runOnlyForDeploymentPostprocessing = 0; };
+  A00000000000000000000031 = {isa = PBXHeadersBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000002,A00000000000000000000004,A00000000000000000000006,A00000000000000000000008,A00000000000000000000009,A0000000000000000000000B,A0000000000000000000000C,); runOnlyForDeploymentPostprocessing = 0; };
+  A00000000000000000000032 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+  A00000000000000000000033 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+  A00000000000000000000040 = {isa = PBXNativeTarget; buildConfigurationList = A00000000000000000000060; buildPhases = (A00000000000000000000031,A00000000000000000000032,A00000000000000000000030,A00000000000000000000033,); buildRules = (); dependencies = (); name = TuringProbe; productName = TuringProbe; productReference = A0000000000000000000001D; productType = "com.apple.product-type.kernel-extension"; };
+  A00000000000000000000050 = {isa = PBXProject; attributes = {LastUpgradeCheck = 1620;}; buildConfigurationList = A00000000000000000000061; compatibilityVersion = "Xcode 9.3"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en,Base,); mainGroup = A00000000000000000000020; productRefGroup = A00000000000000000000023; projectDirPath = ""; projectRoot = ""; targets = (A00000000000000000000040,); };
+  A00000000000000000000070 = {isa = XCBuildConfiguration; buildSettings = {ARCHS = x86_64; CLANG_CXX_LANGUAGE_STANDARD = "c++14"; CODE_SIGNING_ALLOWED = NO; DEBUG_INFORMATION_FORMAT = dwarf; GCC_OPTIMIZATION_LEVEL = 0; KERNEL_EXTENSION_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/MacKernelSDK/Headers"; KERNEL_FRAMEWORK_HEADERS = "$(PROJECT_DIR)/MacKernelSDK/Headers"; MACOSX_DEPLOYMENT_TARGET = 15.0; ONLY_ACTIVE_ARCH = YES; SDKROOT = macosx;}; name = Debug; };
+  A00000000000000000000071 = {isa = XCBuildConfiguration; buildSettings = {ARCHS = x86_64; CLANG_CXX_LANGUAGE_STANDARD = "c++14"; CODE_SIGNING_ALLOWED = NO; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; KERNEL_EXTENSION_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/MacKernelSDK/Headers"; KERNEL_FRAMEWORK_HEADERS = "$(PROJECT_DIR)/MacKernelSDK/Headers"; MACOSX_DEPLOYMENT_TARGET = 15.0; SDKROOT = macosx;}; name = Release; };
+  A00000000000000000000072 = {isa = XCBuildConfiguration; buildSettings = {CLANG_CXX_LANGUAGE_STANDARD = "c++14"; CODE_SIGNING_ALLOWED = NO; COMPILER_INDEX_STORE_ENABLE = NO; CURRENT_PROJECT_VERSION = 0.1.0; GCC_ENABLE_FLOATING_POINT_LIBRARY_CALLS = NO; GCC_PREPROCESSOR_DEFINITIONS = ("KERNEL=1","$(inherited)",); HEADER_SEARCH_PATHS = ("$(PROJECT_DIR)/MacKernelSDK/Headers","$(PROJECT_DIR)",); INFOPLIST_FILE = kext/TuringProbe/Info.plist; LIBRARY_SEARCH_PATHS = ("$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",); MODULE_NAME = com.mrnev1s.driver.TuringProbe; MODULE_VERSION = 0.1.0; OTHER_CFLAGS = ("-fno-builtin","-fno-asynchronous-unwind-tables","-fno-exceptions","-fno-rtti","-Werror=return-type","-Wall","-Wextra","-Wno-unused-parameter","-Wno-unknown-warning-option",); OTHER_LDFLAGS = ("-static","-lkmod",); PRODUCT_BUNDLE_IDENTIFIER = com.mrnev1s.driver.TuringProbe; PRODUCT_NAME = "$(TARGET_NAME)"; WRAPPER_EXTENSION = kext;}; name = Debug; };
+  A00000000000000000000073 = {isa = XCBuildConfiguration; buildSettings = {CLANG_CXX_LANGUAGE_STANDARD = "c++14"; CODE_SIGNING_ALLOWED = NO; COMPILER_INDEX_STORE_ENABLE = NO; CURRENT_PROJECT_VERSION = 0.1.0; DEAD_CODE_STRIPPING = YES; GCC_ENABLE_FLOATING_POINT_LIBRARY_CALLS = NO; GCC_PREPROCESSOR_DEFINITIONS = ("KERNEL=1","$(inherited)",); HEADER_SEARCH_PATHS = ("$(PROJECT_DIR)/MacKernelSDK/Headers","$(PROJECT_DIR)",); INFOPLIST_FILE = kext/TuringProbe/Info.plist; LIBRARY_SEARCH_PATHS = ("$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",); MODULE_NAME = com.mrnev1s.driver.TuringProbe; MODULE_VERSION = 0.1.0; OTHER_CFLAGS = ("-fno-builtin","-fno-asynchronous-unwind-tables","-fno-exceptions","-fno-rtti","-Werror=return-type","-Wall","-Wextra","-Wno-unused-parameter","-Wno-unknown-warning-option",); OTHER_LDFLAGS = ("-static","-lkmod",); PRODUCT_BUNDLE_IDENTIFIER = com.mrnev1s.driver.TuringProbe; PRODUCT_NAME = "$(TARGET_NAME)"; STRIP_STYLE = "non-global"; WRAPPER_EXTENSION = kext;}; name = Release; };
+  A00000000000000000000060 = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000072,A00000000000000000000073,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+  A00000000000000000000061 = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000070,A00000000000000000000071,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+ };
+ rootObject = A00000000000000000000050;
+}

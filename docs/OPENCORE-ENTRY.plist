@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Arch</key><string>x86_64</string>
+  <key>BundlePath</key><string>TuringProbe.kext</string>
+  <key>Comment</key><string>TuringProbe 0.1 read-only PCI probe</string>
+  <key>Enabled</key><true/>
+  <key>ExecutablePath</key><string>Contents/MacOS/TuringProbe</string>
+  <key>MaxKernel</key><string>24.99.99</string>
+  <key>MinKernel</key><string>24.0.0</string>
+  <key>PlistPath</key><string>Contents/Info.plist</string>
+</dict>
+</plist>
