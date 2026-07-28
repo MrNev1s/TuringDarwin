@@ -94,7 +94,8 @@ void publishPciSnapshot(IOPCIDevice *device, IOService *owner) {
 
 void publishRegistryPaths(IOPCIDevice *device, IOService *owner) {
     publishPath(device, owner, "TPIOServicePath", gIOServicePlane);
-    publishPath(device, owner, "TPIODeviceTreePath", gIODeviceTreePlane);
+    publishPath(device, owner, "TPIODeviceTreePath",
+            IORegistryEntry::getPlane("IODeviceTree"));
 
     const char *name = device != nullptr ? device->getName(gIOServicePlane) : nullptr;
     const char *location = device != nullptr ? device->getLocation(gIOServicePlane) : nullptr;
