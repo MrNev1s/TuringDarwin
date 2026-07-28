@@ -4,7 +4,7 @@
 <dict>
   <key>Arch</key><string>x86_64</string>
   <key>BundlePath</key><string>TuringProbe.kext</string>
-  <key>Comment</key><string>TuringProbe 0.2.0 BAR0 read-only diagnostic</string>
+  <key>Comment</key><string>TuringProbe 0.2.1 BAR0 read-only diagnostic</string>
   <key>Enabled</key><true/>
   <key>ExecutablePath</key><string>Contents/MacOS/TuringProbe</string>
   <key>MaxKernel</key><string>24.99.99</string>

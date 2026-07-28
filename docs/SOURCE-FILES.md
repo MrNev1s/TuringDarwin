@@ -1,4 +1,4 @@
-# Exact source and support file list for v0.2.0
+# Exact source and support file list for v0.2.1
 
 ## Canonical state
 

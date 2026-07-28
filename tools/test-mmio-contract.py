@@ -18,6 +18,12 @@ for name, value in expected.items():
     assert match and int(match.group(1), 16) == value, name
 
 assert "descriptor->map(kIOMapReadOnly)" in mmio
+assert "IOMemoryMap *mapping = descriptor->map(kIOMapReadOnly);" in mmio
+assert mmio.count("mapping->release();") == 1
+assert "mapping = nullptr;" in mmio
+assert 'TPBAR0MappingReleased", mappingReleased' in mmio
+assert "auto mapping =" not in mmio
+assert "OSPtr<IOMemoryMap>" not in mmio
 assert mmio.count("readWhitelisted32(bar0,") == 3
 assert "configWrite" not in mmio
 assert "IOMappedWrite" not in mmio
@@ -25,7 +31,7 @@ assert "OSWrite" not in mmio
 assert "-tdprobe" in main and "-tdmmio-read" in main
 assert "-tdunsafe" in main
 assert pbx.count("TURINGPROBE_ENABLE_MMIO_READ=1") == 2
-assert "MODULE_VERSION = 0.2.0" in pbx
+assert "MODULE_VERSION = 0.2.1" in pbx
 
 # Validate the decode formulas against a representative TU116 BOOT0 value.
 boot0 = 0x168000A1
@@ -42,4 +48,4 @@ crystals = {
 }
 assert len(crystals) == 4
 
-print("MMIO CONTRACT PASSED: three fixed reads, read-only map, TU116/strap decoders valid")
+print("MMIO CONTRACT PASSED: three fixed reads, read-only map, explicit release, TU116/strap decoders valid")

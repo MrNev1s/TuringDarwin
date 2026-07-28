@@ -1,4 +1,4 @@
-# Add TuringProbe 0.2.0 to a separate test EFI
+# Add TuringProbe 0.2.1 to a separate test EFI
 
 Do not alter the known-good stable EFI. Do not install this kext into the macOS
 system volume or `/Library/Extensions`.
@@ -17,7 +17,7 @@ Add this as the last item in `Kernel -> Add`:
 <dict>
   <key>Arch</key><string>x86_64</string>
   <key>BundlePath</key><string>TuringProbe.kext</string>
-  <key>Comment</key><string>TuringProbe 0.2.0 BAR0 read-only diagnostic</string>
+  <key>Comment</key><string>TuringProbe 0.2.1 BAR0 read-only diagnostic</string>
   <key>Enabled</key><true/>
   <key>ExecutablePath</key><string>Contents/MacOS/TuringProbe</string>
   <key>MaxKernel</key><string>24.99.99</string>

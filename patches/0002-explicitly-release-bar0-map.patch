@@ -1,0 +1,80 @@
+--- a/kext/TuringProbe/MMIOReadOnly.cpp
++++ b/kext/TuringProbe/MMIOReadOnly.cpp
+@@ -108,37 +108,44 @@
+     UInt16 commandAfterReads = 0U;
+     UInt64 mappingLength = 0U;
+     bool mappingCreated = false;
++    bool mappingReleased = false;
+     const char *mappingFailure = nullptr;
+ 
+-    {
+-        auto mapping = descriptor->map(kIOMapReadOnly);
+-        if (!mapping) {
+-            mappingFailure = "read-only BAR0 mapping failed";
++    // For third-party C++14 kexts, OSPtr<T> is a raw T* unless the experimental
++    // shared-pointer API is explicitly enabled. Therefore the mapping must be
++    // released explicitly on every path after a successful map().
++    IOMemoryMap *mapping = descriptor->map(kIOMapReadOnly);
++    if (mapping == nullptr) {
++        mappingFailure = "read-only BAR0 mapping failed";
++    } else {
++        mappingCreated = true;
++        mappingLength = mapping->getLength();
++        const IOVirtualAddress virtualAddress = mapping->getVirtualAddress();
++        if (virtualAddress == 0U) {
++            mappingFailure = "BAR0 mapping has no virtual address";
++        } else if (mappingLength != static_cast<UInt64>(kExpectedBar0Length)) {
++            mappingFailure = "BAR0 mapping length is not exactly 16 MiB";
+         } else {
+-            mappingCreated = true;
+-            mappingLength = mapping->getLength();
+-            const IOVirtualAddress virtualAddress = mapping->getVirtualAddress();
+-            if (virtualAddress == 0U) {
+-                mappingFailure = "BAR0 mapping has no virtual address";
+-            } else if (mappingLength != static_cast<UInt64>(kExpectedBar0Length)) {
+-                mappingFailure = "BAR0 mapping length is not exactly 16 MiB";
+-            } else {
+-                commandAfterMap = device->configRead16(kPciCommandOffset);
+-                const void *bar0 = reinterpret_cast<const void *>(virtualAddress);
+-
+-                // Fixed sequence. Exactly one read per whitelisted register.
+-                boot1 = readWhitelisted32(bar0, kNvPmcBoot1Offset);
+-                boot0 = readWhitelisted32(bar0, kNvPmcBoot0Offset);
+-                strap = readWhitelisted32(bar0, kNvPextdevBoot0StrapOffset);
+-                commandAfterReads = device->configRead16(kPciCommandOffset);
+-            }
++            commandAfterMap = device->configRead16(kPciCommandOffset);
++            const void *bar0 = reinterpret_cast<const void *>(virtualAddress);
++
++            // Fixed sequence. Exactly one read per whitelisted register.
++            boot1 = readWhitelisted32(bar0, kNvPmcBoot1Offset);
++            boot0 = readWhitelisted32(bar0, kNvPmcBoot0Offset);
++            strap = readWhitelisted32(bar0, kNvPextdevBoot0StrapOffset);
++            commandAfterReads = device->configRead16(kPciCommandOffset);
+         }
+-    } // OSPtr<IOMemoryMap> leaves scope; the BAR0 mapping is destroyed here.
++
++        mapping->release();
++        mapping = nullptr;
++        mappingReleased = true;
++    }
+ 
+     publishBoolean(owner, "TPBAR0MappingCreated", mappingCreated);
+     publishBoolean(owner, "TPBAR0MappingReadOnlyRequested", true);
+-    publishBoolean(owner, "TPBAR0MappingRetainedAfterProbe", false);
+-    publishBoolean(owner, "TPBAR0MappingReleased", mappingCreated);
++    publishBoolean(owner, "TPBAR0MappingRetainedAfterProbe",
++                   mappingCreated && !mappingReleased);
++    publishBoolean(owner, "TPBAR0MappingReleased", mappingReleased);
+     publishNumber(owner, "TPBAR0MappingLength", mappingLength, 64);
+ 
+     if (mappingFailure != nullptr) {
+@@ -174,7 +181,7 @@
+         return fail(owner, "NV_PMC_BOOT_1 returned all ones");
+     }
+     if (boot1 == kBoot1BigEndianValue) {
+-        return fail(owner, "GPU reports big-endian MMIO; v0.2.0 will not switch it");
++        return fail(owner, "GPU reports big-endian MMIO; v0.2.1 will not switch it");
+     }
+ 
+     const UInt32 vgpuBits = boot1 & kBoot1VgpuMask;

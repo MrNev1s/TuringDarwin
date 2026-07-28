@@ -1,4 +1,4 @@
-# TuringDarwin / TuringProbe 0.2.0
+# TuringDarwin / TuringProbe 0.2.1
 
 `TuringProbe.kext` is the deliberately constrained diagnostic component for the
 exact ASUS TU116 board `10DE:2182 / 1043:8854`. It is not a framebuffer,
@@ -18,13 +18,13 @@ hand-off and separates real-hardware facts from source-only work.
 - GOP/IONDRV output remained stable at 1920×1080;
 - no MMIO, DMA, interrupt, firmware, power, or user-client path was used.
 
-## 0.2.0 scope
+## 0.2.1 scope
 
-Version 0.2.0 adds the first **read-only BAR0 experiment**. It has two modes:
+Version 0.2.1 adds the first **read-only BAR0 experiment**. It has two modes:
 
 - `-tdprobe`: PCI-only compatibility mode; no BAR is mapped;
 - `-tdprobe -tdmmio-read`: maps only BAR0 with `kIOMapReadOnly`, reads exactly
-  three fixed 32-bit registers once each, then destroys the mapping before
+  three fixed 32-bit registers once each, then explicitly releases the mapping before
   `start()` completes.
 
 The three authorised offsets are:
@@ -66,5 +66,5 @@ The workflow pins:
 Run **Build TuringProbe kext** with `Debug`. Expected artifact:
 
 ```text
-TuringProbe-v0.2.0-Debug-x86_64
+TuringProbe-v0.2.1-Debug-x86_64
 ```

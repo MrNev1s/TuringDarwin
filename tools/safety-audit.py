@@ -99,6 +99,16 @@ else:
         errors.append(f"{MMIO_CPP}: no direct volatile pointer is allowed")
     if "descriptor->map(kIOMapReadOnly)" not in mmio:
         errors.append(f"{MMIO_CPP}: mapping must explicitly request kIOMapReadOnly")
+    if "IOMemoryMap *mapping = descriptor->map(kIOMapReadOnly);" not in mmio:
+        errors.append(f"{MMIO_CPP}: mapping ownership must be explicit raw-pointer ownership")
+    if len(re.findall(r"\bmapping->release\s*\(\s*\)\s*;", mmio)) != 1:
+        errors.append(f"{MMIO_CPP}: exactly one explicit mapping->release() is required")
+    if "mapping = nullptr;" not in mmio:
+        errors.append(f"{MMIO_CPP}: mapping pointer must be cleared after release")
+    if "auto mapping =" in mmio or "OSPtr<IOMemoryMap>" in mmio:
+        errors.append(f"{MMIO_CPP}: implicit OSPtr lifetime is forbidden for third-party C++14 builds")
+    if 'TPBAR0MappingReleased", mappingReleased' not in mmio:
+        errors.append(f"{MMIO_CPP}: release telemetry must report the real mappingReleased state")
     if "TURINGPROBE_ENABLE_MMIO_READ" not in mmio:
         errors.append(f"{MMIO_CPP}: compile-time MMIO gate missing")
 
@@ -122,4 +132,4 @@ if errors:
     print("\n".join(errors), file=sys.stderr)
     raise SystemExit(1)
 
-print("SAFETY AUDIT PASSED: v0.2.0 permits only three source-backed read-only BAR0 reads")
+print("SAFETY AUDIT PASSED: v0.2.1 permits three read-only BAR0 reads and requires explicit map release")

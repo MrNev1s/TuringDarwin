@@ -1,4 +1,4 @@
-# Build instructions for TuringProbe 0.2.0
+# Build instructions for TuringProbe 0.2.1
 
 ## Pinned toolchain
 
@@ -12,7 +12,7 @@
 ## Local commands
 
 ```bash
-cd TuringDarwin-v0.2.0
+cd TuringDarwin-v0.2.1
 printf '%s\n' 05094e5e88cec7caedbfb35e8449ed0db94bf95b > MacKernelSDK.lock
 ./tools/bootstrap-sdk.sh
 ./tools/build.sh Debug

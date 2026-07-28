@@ -6,11 +6,11 @@ macOS SDK 15.2, `x86_64`, and pinned MacKernelSDK commit
 
 ## Build steps
 
-1. Upload the 0.2.0 update files into the repository root, including `.github`.
+1. Upload the 0.2.1 update files into the repository root, including `.github`.
 2. Commit the changes.
 3. Open **Actions -> Build TuringProbe kext -> Run workflow**.
 4. Keep `Debug` and the pre-filled full MacKernelSDK SHA.
-5. Download `TuringProbe-v0.2.0-Debug-x86_64` after a green run.
+5. Download `TuringProbe-v0.2.1-Debug-x86_64` after a green run.
 
 The artifact contains the kext ZIP, build log, manifest, and hashes.
 

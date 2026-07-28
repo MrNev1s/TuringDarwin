@@ -4,7 +4,7 @@
 
 namespace td {
 
-// TuringProbe v0.2.0 authorises exactly three 32-bit BAR0 reads.
+// TuringProbe v0.2.1 authorises exactly three 32-bit BAR0 reads.
 // Adding an offset requires a source review, safety analysis, and a new build.
 constexpr UInt32 kNvPmcBoot0Offset = 0x000000U;
 constexpr UInt32 kNvPmcBoot1Offset = 0x000004U;

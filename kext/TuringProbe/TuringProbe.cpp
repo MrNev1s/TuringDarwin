@@ -27,7 +27,7 @@ bool TuringProbe::start(IOService *provider) {
     }
 
     if (bootArgumentPresent("-tdunsafe")) {
-        TD_LOG("v0.2.0 rejects -tdunsafe");
+        TD_LOG("v0.2.1 rejects -tdunsafe");
         return false;
     }
 
@@ -105,12 +105,12 @@ bool TuringProbe::start(IOService *provider) {
     setProperty("TuringProbeSafeReadOnly", kOSBooleanTrue);
     setProperty("TuringProbeProbeCompleted", kOSBooleanTrue);
     setProperty("TuringProbeProbeSchemaVersion", "3");
-    setProperty("TuringProbeVersion", "0.2.0");
+    setProperty("TuringProbeVersion", "0.2.1");
     setProperty("TuringProbeBootMode",
                 mmioRequested ? "-tdprobe -tdmmio-read" : "-tdprobe");
     setProperty("TuringProbeMilestone",
-                mmioRequested ? "BAR0-MMIO-READ-ONLY-V0.2.0" :
-                                "PCI-CONFIG-READ-ONLY-COMPAT-V0.2.0");
+                mmioRequested ? "BAR0-MMIO-READ-ONLY-V0.2.1" :
+                                "PCI-CONFIG-READ-ONLY-COMPAT-V0.2.1");
     setProperty("TuringProbeTarget", "NVIDIA TU116 10DE:2182 / ASUS 1043:8854");
     setProperty("TuringProbePCIConfigWrites", kOSBooleanFalse);
     setProperty("TuringProbeMMIOAccess", mmioCompleted ? kOSBooleanTrue : kOSBooleanFalse);

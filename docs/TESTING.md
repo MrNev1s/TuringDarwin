@@ -1,4 +1,4 @@
-# TuringProbe 0.2.0 controlled test procedure
+# TuringProbe 0.2.1 controlled test procedure
 
 Status: source implemented; Xcode build, binary audit, and real-hardware test
 remain pending.
@@ -25,12 +25,12 @@ Replace only `TuringProbe.kext` in the already-tested separate EFI and retain:
 -tdprobe
 ```
 
-This proves the 0.2.0 binary can reproduce the 0.1.1 PCI-only behavior without
+This proves the 0.2.1 binary can reproduce the 0.1.1 PCI-only behavior without
 mapping BAR0.
 
 Required observations:
 
-- kext version `0.2.0` loaded and active;
+- kext version `0.2.1` loaded and active;
 - `TuringProbeBootMode = -tdprobe`;
 - `TuringProbeMMIOAccess = No`;
 - PCI Command unchanged and Bus Master Enable clear;
@@ -51,21 +51,21 @@ panic/photo/logs.
 ## Log capture
 
 ```bash
-mkdir -p ~/Desktop/TuringProbe-v0.2.0-logs
+mkdir -p ~/Desktop/TuringProbe-v0.2.1-logs
 kmutil showloaded | grep -i TuringProbe \
-  > ~/Desktop/TuringProbe-v0.2.0-logs/kmutil.txt
+  > ~/Desktop/TuringProbe-v0.2.1-logs/kmutil.txt
 ioreg -r -c TuringProbe -l -w0 \
-  > ~/Desktop/TuringProbe-v0.2.0-logs/ioreg-turingprobe.txt
+  > ~/Desktop/TuringProbe-v0.2.1-logs/ioreg-turingprobe.txt
 ioreg -l -w0 -p IOService \
-  > ~/Desktop/TuringProbe-v0.2.0-logs/ioreg-full.txt
+  > ~/Desktop/TuringProbe-v0.2.1-logs/ioreg-full.txt
 log show --last boot --style compact \
   --predicate 'eventMessage CONTAINS[c] "TuringProbe"' \
-  > ~/Desktop/TuringProbe-v0.2.0-logs/kernel-log.txt
+  > ~/Desktop/TuringProbe-v0.2.1-logs/kernel-log.txt
 system_profiler SPDisplaysDataType \
-  > ~/Desktop/TuringProbe-v0.2.0-logs/displays.txt
-sw_vers > ~/Desktop/TuringProbe-v0.2.0-logs/sw-vers.txt
-nvram boot-args > ~/Desktop/TuringProbe-v0.2.0-logs/boot-args.txt 2>&1 || true
-cd ~/Desktop && zip -r TuringProbe-v0.2.0-logs.zip TuringProbe-v0.2.0-logs
+  > ~/Desktop/TuringProbe-v0.2.1-logs/displays.txt
+sw_vers > ~/Desktop/TuringProbe-v0.2.1-logs/sw-vers.txt
+nvram boot-args > ~/Desktop/TuringProbe-v0.2.1-logs/boot-args.txt 2>&1 || true
+cd ~/Desktop && zip -r TuringProbe-v0.2.1-logs.zip TuringProbe-v0.2.1-logs
 ```
 
 The bundled `tools/collect-macos.sh` performs the same collection.
@@ -74,7 +74,7 @@ The bundled `tools/collect-macos.sh` performs the same collection.
 
 All of the following must be present:
 
-- `TuringProbeVersion = 0.2.0`;
+- `TuringProbeVersion = 0.2.1`;
 - `TuringProbeBootMode = -tdprobe -tdmmio-read`;
 - `TuringProbeMMIOAccess = Yes`;
 - `TuringProbeMMIOWrites = No`;

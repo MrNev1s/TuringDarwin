@@ -1,10 +1,10 @@
 # TuringDarwin — Canonical Project State
 
-**State version:** 3  
+**State version:** 4  
 **Updated:** 2026-07-29  
 **Repository:** `MrNev1s/TuringDarwin`  
 **Current real-hardware-verified component:** `TuringProbe.kext 0.1.1`  
-**Current source candidate:** `TuringProbe.kext 0.2.0`
+**Current source candidate:** `TuringProbe.kext 0.2.1`
 
 This file is the authoritative hand-off. Claims use these labels:
 
@@ -103,34 +103,24 @@ Substates `0x258`, AER `0x420`, VSEC `0x600`, Secondary PCIe `0x900`, ReBAR
 - executable SHA-256
   `45d1e6a2a258a7f7699e9f86ee4d30dbfbc6af3e2d04e1d494685c97d5f2d080`.
 
-## 7. TuringProbe 0.2.0 candidate
+## 7. TuringProbe 0.2 artifact status
+
+### 0.2.0 compiled artifact
+
+**[OFFLINE VERIFIED, REJECTED FOR BOOT]**
+
+The GitHub build succeeded and the binary contained only the intended three
+MMIO read call sites, but disassembly proved that the returned `IOMemoryMap` was
+not released. The source incorrectly assumed automatic `OSPtr` destruction in a
+third-party C++14 build. `TPBAR0MappingReleased` would therefore have reported a
+false success. Artifact hashes and details are recorded in
+`docs/ARTIFACT-REVIEW-0.2.0-REJECTED.md`. No hardware boot was performed.
+
+### 0.2.1 source candidate
 
 **[SOURCE IMPLEMENTED, NOT BUILT]**
 
-Two modes:
-
-- `-tdprobe`: PCI-only compatibility mode, no BAR map;
-- `-tdprobe -tdmmio-read`: first BAR0 read-only experiment.
-
-Fail-closed requirements before mapping:
-
-- compile gate `TURINGPROBE_ENABLE_MMIO_READ=1`;
-- exact target identity;
-- `-tdoff` and `-tdunsafe` absent;
-- memory decoding enabled and bus mastering disabled;
-- BAR0 raw value and IOPCIFamily descriptor agree;
-- BAR0 is exactly 16 MiB, 32-bit, non-prefetchable, and aligned.
-
-Mapping contract:
-
-- `IOMemoryDescriptor::map(kIOMapReadOnly)` only;
-- mapping held in a local `OSPtr<IOMemoryMap>` scope;
-- no cache-policy override;
-- no stored virtual address or retained map;
-- exactly three 32-bit reads, once each;
-- mapping destroyed before `start()` completes.
-
-Whitelist:
+Version 0.2.1 preserves the same fail-closed BAR0 gate and exact whitelist:
 
 | Order | Offset | Register | Validation |
 |---:|---:|---|---|
@@ -138,17 +128,16 @@ Whitelist:
 | 2 | `0x000000` | `NV_PMC_BOOT_0` | require chipset `0x168`, publish revision |
 | 3 | `0x101000` | `NV_PEXTDEV_BOOT_0_STRAP` | decode known crystal straps |
 
-PCI Command is sampled before map, after map, after reads, and after the full
-probe; all values must match and Bus Master Enable must remain clear.
+Ownership correction:
 
-Local source checks passed:
+- explicit `IOMemoryMap *mapping`;
+- `mapping->release()` exactly once after every successful `map()` path;
+- pointer cleared to `nullptr`;
+- actual `mappingReleased` telemetry;
+- source audits require the release and reject implicit `OSPtr` lifetime.
 
-- safety audit;
-- PCI/ReBAR decoder contract;
-- MMIO whitelist/map contract;
-- Python syntax, plist parse, and Xcode-project structural checks.
-
-No claim of Xcode compilation, binary safety, or hardware success is made yet.
+No claim of Xcode compilation, binary correctness, or hardware success is made
+for 0.2.1 yet.
 
 ## 8. Non-negotiable prohibition list
 
@@ -158,7 +147,7 @@ change, full BAR dump, IOUserClient, workloop, or command gate is authorised.
 
 ## 9. Next gate
 
-1. Build 0.2.0 in GitHub Actions with the pinned toolchain.
+1. Build 0.2.1 in GitHub Actions with the pinned toolchain.
 2. Upload the complete artifact for binary/import/disassembly audit.
 3. Prepare a separate test-EFI package only after that audit.
 4. Boot PCI-only mode first (`-tdprobe`).

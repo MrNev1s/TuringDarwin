@@ -1,4 +1,4 @@
-# Architecture: TuringProbe 0.2.0
+# Architecture: TuringProbe 0.2.1
 
 ## Service lifecycle
 
@@ -41,4 +41,4 @@ service does not register. No recovery write or reset is attempted.
 
 Firmware, memory management, GPU VM, channels/FIFO, interrupts, command
 submission, display, and userspace APIs remain separate future modules. Nothing
-in 0.2.0 authorises their implementation or hardware use.
+in 0.2.1 authorises their implementation or hardware use.

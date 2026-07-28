@@ -1,4 +1,4 @@
-# TuringProbe 0.2.0 — Read-only BAR0 MMIO gate
+# TuringProbe 0.2.1 — Read-only BAR0 MMIO gate
 
 Status: **source implemented; build and real-hardware gates remain pending**.
 
@@ -20,7 +20,7 @@ BAR0 mapping occurs only when all of these are true:
 6. PCI memory decoding is enabled and bus mastering is disabled;
 7. BAR0 and its IOPCIFamily descriptor pass exact type/base/length checks.
 
-With only `-tdprobe`, v0.2.0 remains in PCI-only compatibility mode and maps no
+With only `-tdprobe`, v0.2.1 remains in PCI-only compatibility mode and maps no
 BAR. This permits a safe diagnostic fallback without changing the kext.
 
 ## Mapping lifetime
@@ -30,7 +30,7 @@ BAR. This permits a safe diagnostic fallback without changing the kext.
 - No cache policy override is requested.
 - The mapping exists only in a local scope.
 - Exactly three fixed reads occur.
-- The `OSPtr<IOMemoryMap>` leaves scope before the service registers.
+- The `IOMemoryMap *` is explicitly released and cleared before the service registers.
 - No mapping or virtual address is stored in the service object.
 
 ## Whitelist

@@ -1,4 +1,4 @@
-# BAR0 register whitelist — TuringProbe v0.2.0
+# BAR0 register whitelist — TuringProbe v0.2.1
 
 Status: **implemented in source; not yet compiled or tested on the target**.
 

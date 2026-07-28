@@ -9,12 +9,12 @@
 | PCI capability and full ReBAR decode | **Real hardware verified** | 0.1.1 logs |
 | Command Register unchanged | **Real hardware verified** | 0.1.1 before/after = `0x0003` |
 | Bus mastering remains disabled | **Real hardware verified** | 0.1.1 before/after = No |
-| 0.2.0 source safety audit | **Passed locally** | `tools/safety-audit.py` |
-| 0.2.0 MMIO contract test | **Passed locally** | exactly three fixed reads/read-only map |
-| 0.2.0 Xcode build | **Not yet verified** | GitHub Actions required |
-| 0.2.0 binary call-site audit | **Not yet verified** | inspect uploaded artifact |
-| 0.2.0 PCI-only compatibility boot | **Not yet tested** | boot with `-tdprobe` |
-| 0.2.0 BAR0 read-only boot | **Not yet tested** | later boot with `-tdprobe -tdmmio-read` |
+| 0.2.1 source safety audit | **Passed locally** | `tools/safety-audit.py` |
+| 0.2.1 MMIO contract test | **Passed locally** | exactly three fixed reads/read-only map |
+| 0.2.1 Xcode build | **Not yet verified** | GitHub Actions required |
+| 0.2.1 binary call-site audit | **Not yet verified** | inspect uploaded artifact |
+| 0.2.1 PCI-only compatibility boot | **Not yet tested** | boot with `-tdprobe` |
+| 0.2.1 BAR0 read-only boot | **Not yet tested** | later boot with `-tdprobe -tdmmio-read` |
 | PCI configuration writes | **Forbidden** | none authorised |
 | MMIO writes | **Forbidden** | none authorised |
 | DMA / channels / Copy Engine | **Research only** | no implementation |
