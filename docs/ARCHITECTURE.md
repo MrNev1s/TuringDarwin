@@ -1,44 +1,60 @@
-# Architecture: TuringProbe 0.2.1
+# Architecture: TuringProbe 0.5.1
 
-## Service lifecycle
+## Kernel boundary
 
-`TuringProbe` matches the exact primary and subsystem PCI IDs in `Info.plist`
-and repeats the four-ID verification in `start()`.
+The compiled kext still has the same hardware-facing modules as 0.4.0:
 
-Two runtime modes share one binary:
+- exact PCI match and bounded capability parsing;
+- BAR metadata inspection;
+- short-lived `kIOMapReadOnly` BAR0 mapping;
+- three fixed identity reads;
+- optional historical bounded PTOP table read;
+- optional historical one-register VRAM capacity read.
 
-- PCI-only compatibility mode: `-tdprobe`;
-- BAR0 read-only mode: `-tdprobe -tdmmio-read`.
+0.5.1 adds no MMU accessor, no new boot argument and no write path.
 
-`-tdoff` disables the service and `-tdunsafe` is rejected.
+## Offline boundary
 
-## Modules
+The MMU work is outside the Xcode project and runs as ordinary Python:
 
-- `TuringProbe.cpp`: boot gates, exact target verification, service lifecycle,
-  PCI Command invariants, mode selection, and final IORegistry status.
-- `PCIConfig.cpp`: identity, fixed PCI header fields, conventional config
-  snapshot, and registry paths.
-- `CapabilityParser.cpp`: bounded conventional/extended capability walks and
-  read-only ReBAR decoding.
-- `BARInspector.cpp`: raw BAR classification and existing IODeviceMemory
-  metadata; it does not map BARs.
-- `MMIOReadOnly.cpp`: the only mapping module. It validates BAR0, requests a
-  short-lived read-only mapping, executes the three-register whitelist, checks
-  PCI Command state, publishes results, and retains no mapping.
-- `TuringRegisters.hpp`: immutable whitelist offsets and decode constants.
-- `Logging.hpp`: bounded log prefix.
+- format model;
+- single-image builder/walker;
+- multi-page address-space builder/walker;
+- fixed golden vectors;
+- transaction/rollback plan.
 
-There is no IOUserClient, DMA object, interrupt source, firmware handler,
-display interface, workloop, or command gate.
+The safety audit rejects IOKit, MMIO, device, process and network access tokens
+inside the offline research modules and rejects their inclusion in the Xcode
+project.
+
+## Validation architecture
+
+`tools/run-offline-validation.sh` is the only complete validation entry point.
+GitHub Actions and `tools/build.sh` both invoke it, preventing local/CI drift.
+
+The pipeline order is:
+
+```text
+safety audit
+→ legacy PCI/MMIO/PTOP/FB contracts
+→ randomized MMU model
+→ byte-exact image model
+→ fixed golden vectors
+→ multi-page address space
+→ transaction/rollback model
+→ syntax/plist checks
+→ Xcode build
+```
 
 ## Failure behavior
 
-Any identity, BAR, descriptor, mapping, register, or PCI Command inconsistency
-causes `start()` to fail closed. The PCI device retain is released and the
-service does not register. No recovery write or reset is attempted.
+All kernel paths remain fail-closed and release the BAR0 mapping. All offline
+builders reject misalignment, address overflow, invalid kinds, compression,
+virtual overlap, accidental physical aliasing, corrupt table chains and
+unproven transaction inverses.
 
-## Future boundaries
+## Hardware eligibility
 
-Firmware, memory management, GPU VM, channels/FIFO, interrupts, command
-submission, display, and userspace APIs remain separate future modules. Nothing
-in 0.2.1 authorises their implementation or hardware use.
+The transaction model stops before `stage-tables-in-device-memory`. No
+isolated VRAM allocator or CPU write/readback inverse exists, so all later MMU
+phases remain ineligible.

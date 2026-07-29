@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "target": "TU102/TU116 MMU VER2",
+  "sources": [
+    "Nouveau vmmgp100.c descriptors and encoders",
+    "Nouveau tu102.c kind/DMA profile",
+    "NVIDIA open UVM uvm_turing_mmu.c independent cross-check"
+  ],
+  "virtual_address_vectors": [
+    {
+      "virtual_address": "0x000001A512345678",
+      "page_shift": 12,
+      "expected": {
+        "root": 0,
+        "pd2": 6,
+        "pd1": 296,
+        "pd0": 145,
+        "leaf": 325,
+        "offset": 1656
+      }
+    },
+    {
+      "virtual_address": "0x000001A512345678",
+      "page_shift": 16,
+      "expected": {
+        "root": 0,
+        "pd2": 6,
+        "pd1": 296,
+        "pd0": 145,
+        "leaf": 20,
+        "offset": 22136
+      }
+    },
+    {
+      "virtual_address": "0x000001A512345678",
+      "page_shift": 21,
+      "expected": {
+        "root": 0,
+        "pd2": 6,
+        "pd1": 296,
+        "pd0": 145,
+        "offset": 1332856
+      }
+    }
+  ],
+  "pte_vectors": [
+    {
+      "name": "video-read-only-4k",
+      "physical_address": "0x0000000000200000",
+      "page_shift": 12,
+      "aperture": 0,
+      "kind": 0,
+      "valid": true,
+      "volatile": false,
+      "privileged": false,
+      "read_only": true,
+      "atomic_disable": true,
+      "expected_entry": "0x00000000000200C1"
+    },
+    {
+      "name": "system-coherent-64k",
+      "physical_address": "0x0000000000400000",
+      "page_shift": 16,
+      "aperture": 2,
+      "kind": 0,
+      "valid": true,
+      "volatile": true,
+      "privileged": false,
+      "read_only": false,
+      "atomic_disable": true,
+      "expected_entry": "0x000000000004008D"
+    },
+    {
+      "name": "kind-fallback-2m",
+      "physical_address": "0x0000000000600000",
+      "page_shift": 21,
+      "aperture": 0,
+      "kind": 8,
+      "valid": true,
+      "volatile": false,
+      "privileged": false,
+      "read_only": false,
+      "atomic_disable": false,
+      "expected_entry": "0x0600000000060001"
+    },
+    {
+      "name": "video-max-47bit-4k",
+      "physical_address": "0x00007FFFFFFFF000",
+      "page_shift": 12,
+      "aperture": 0,
+      "kind": 0,
+      "valid": true,
+      "volatile": false,
+      "privileged": false,
+      "read_only": true,
+      "atomic_disable": true,
+      "expected_entry": "0x000007FFFFFFFFC1"
+    }
+  ],
+  "pde_vectors": [
+    {
+      "name": "video-table",
+      "table_address": "0x0000000001002000",
+      "aperture": 1,
+      "expected_entry": "0x0000000000100202"
+    },
+    {
+      "name": "system-coherent-table",
+      "table_address": "0x0000000001003000",
+      "aperture": 2,
+      "expected_entry": "0x000000000010030C"
+    }
+  ],
+  "instance_vectors": [
+    {
+      "name": "video-ver2-64k",
+      "root_address": "0x0000000001000000",
+      "aperture": 0,
+      "replay_tex": false,
+      "replay_gcc": false,
+      "expected_word": "0x0000000001000C00"
+    }
+  ]
+}

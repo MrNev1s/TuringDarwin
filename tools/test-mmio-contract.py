@@ -37,7 +37,7 @@ assert "topRequested && fbMmuRequested" in main
 assert "-tdunsafe" in main
 assert pbx.count("TURINGPROBE_ENABLE_MMIO_READ=1") == 2
 assert "FbMmuInventory.cpp" in pbx and "FbMmuInventory.hpp" in pbx
-assert pbx.count("MODULE_VERSION = 0.5.0") == 2
+assert pbx.count("MODULE_VERSION = 0.5.1") == 2
 
 boot0 = 0x168000A1
 chipset = (boot0 & 0x1FF00000) >> 20
@@ -55,6 +55,6 @@ assert crystals[0x00400000] == 27000
 
 print("MMIO CONTRACT PASSED: read-only map, explicit release, identity gate, optional TOP or one-register FB inventory")
 
-# v0.5.0 MMU work is offline-only and must not add a kext MMIO accessor.
+# v0.5.1 MMU work is offline-only and must not add a kext MMIO accessor.
 model = (ROOT / "research/tu102_mmu_model.py").read_text(encoding="utf-8")
 assert "OSRead" not in model and "IOMemoryMap" not in model

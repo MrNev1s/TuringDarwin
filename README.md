@@ -1,39 +1,53 @@
-# TuringDarwin / TuringProbe 0.5.0 MMU research
+# TuringDarwin / TuringProbe 0.5.1 MMU research
 
 TuringProbe is a staged research kext for the exact ASUS TU116 target
 `10DE:2182 / 1043:8854` on macOS Sequoia.
 
-## Verified hardware milestones
+## Verified real-hardware milestones
 
-- PCI discovery and BAR inventory;
+- exact PCI discovery and BAR inventory;
 - three-register TU116 identity;
-- bounded PTOP topology inventory;
+- bounded 64-dword PTOP topology inventory;
 - one-register physical VRAM capacity decode: 6 GiB.
 
-## Current 0.5.0 work
+## Current 0.5.1 work
 
-Version 0.5.0 adds an **offline** TU102/TU116 page-table model and corrects a
-source-metadata error from 0.4.0: page shift 16 means 64 KiB, not 16 KiB.
+Version 0.5.1 is an **offline MMU correctness and CI release**. It adds no new
+MMIO offset, boot argument, write path, DMA path, interrupt path, firmware path,
+or user client.
 
-No new MMIO offset, boot argument or hardware operation is added.
+New offline coverage:
+
+- fixed source-derived golden vectors;
+- deterministic multi-page address-space builder;
+- 4 KiB, 64 KiB and 2 MiB mappings;
+- leaf, PD0 and root-index boundary crossings;
+- mixed 4 KiB/64 KiB PD0 halves;
+- overlap and alias policy;
+- 4 KiB ↔ 2 MiB promotion/demotion;
+- transaction and rollback state machine;
+- complete validation suite wired into GitHub Actions and `tools/build.sh`.
+
+Run everything with:
+
+```bash
+bash tools/run-offline-validation.sh
+```
 
 Read:
 
-- `docs/MMU-RESEARCH-0.5.0.md`
+- `docs/MMU-RESEARCH-0.5.1.md`
 - `docs/MMU-PAGE-TABLE-FORMAT.md`
+- `docs/MMU-HARDWARE-TRANSACTION-0.5.1.md`
+- `docs/MMU-ROLLBACK-MATRIX-0.5.1.md`
 - `docs/MMU-REGISTER-EXCLUSION.md`
-
-Run:
-
-```bash
-python3 tools/test-mmu-model.py
-python3 tools/test-page-table-image.py
-python3 tools/test-fb-mmu-contract.py
-python3 tools/test-mmio-contract.py
-python3 tools/safety-audit.py
-```
 
 ## Hardware policy
 
-Use the verified test EFI with `-tdprobe` only. Do not enable the old MMIO,
-PTOP or FB one-shot modes again. No MMU write or new MMU read is authorised.
+Keep the verified test EFI on `-tdprobe` only. Do not install 0.5.1 merely
+because it compiles: the kext hardware interface is unchanged from 0.4.0 and a
+boot would produce no new MMU evidence.
+
+No MMU register read, VRAM allocation, page-table write, PDB programming,
+BAR1/BAR2 programming, TLB invalidation, DMA, channel, FIFO, Copy Engine, or
+command submission is authorised.

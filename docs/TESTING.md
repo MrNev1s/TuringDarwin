@@ -1,97 +1,46 @@
-# TuringProbe 0.2.1 controlled test procedure
+# TuringProbe 0.5.1 testing
 
-Status: source implemented; Xcode build, binary audit, and real-hardware test
-remain pending.
+## Scope
 
-## Gate A — GitHub build
+0.5.1 is an offline research/CI release. There is no new hardware test.
 
-Use the included workflow with:
-
-- Configuration: `Debug`;
-- MacKernelSDK ref:
-  `05094e5e88cec7caedbfb35e8449ed0db94bf95b`.
-
-Require a green workflow and retain the kext ZIP, manifest, build log,
-undefined-symbol report, and SHA-256 file.
-
-Do not proceed directly from a green workflow to boot. Upload the complete
-artifact for source-to-binary and forbidden-call-site audit first.
-
-## Gate B — PCI-only compatibility boot
-
-Replace only `TuringProbe.kext` in the already-tested separate EFI and retain:
-
-```text
--tdprobe
-```
-
-This proves the 0.2.1 binary can reproduce the 0.1.1 PCI-only behavior without
-mapping BAR0.
-
-Required observations:
-
-- kext version `0.2.1` loaded and active;
-- `TuringProbeBootMode = -tdprobe`;
-- `TuringProbeMMIOAccess = No`;
-- PCI Command unchanged and Bus Master Enable clear;
-- display behavior unchanged.
-
-## Gate C — first BAR0 read-only boot
-
-Only after Gate B passes, use the separate test EFI with:
-
-```text
--tdprobe -tdmmio-read
-```
-
-Use one monitor, retain physical access to power/reset, and keep the untouched
-fallback EFI available. Do not repeat a failed boot without first reviewing the
-panic/photo/logs.
-
-## Log capture
+## Complete local suite
 
 ```bash
-mkdir -p ~/Desktop/TuringProbe-v0.2.1-logs
-kmutil showloaded | grep -i TuringProbe \
-  > ~/Desktop/TuringProbe-v0.2.1-logs/kmutil.txt
-ioreg -r -c TuringProbe -l -w0 \
-  > ~/Desktop/TuringProbe-v0.2.1-logs/ioreg-turingprobe.txt
-ioreg -l -w0 -p IOService \
-  > ~/Desktop/TuringProbe-v0.2.1-logs/ioreg-full.txt
-log show --last boot --style compact \
-  --predicate 'eventMessage CONTAINS[c] "TuringProbe"' \
-  > ~/Desktop/TuringProbe-v0.2.1-logs/kernel-log.txt
-system_profiler SPDisplaysDataType \
-  > ~/Desktop/TuringProbe-v0.2.1-logs/displays.txt
-sw_vers > ~/Desktop/TuringProbe-v0.2.1-logs/sw-vers.txt
-nvram boot-args > ~/Desktop/TuringProbe-v0.2.1-logs/boot-args.txt 2>&1 || true
-cd ~/Desktop && zip -r TuringProbe-v0.2.1-logs.zip TuringProbe-v0.2.1-logs
+bash tools/run-offline-validation.sh
 ```
 
-The bundled `tools/collect-macos.sh` performs the same collection.
+The suite runs:
 
-## BAR0 acceptance criteria
+1. source safety audit;
+2. PCI/ReBAR decoder contract;
+3. MMIO ownership and whitelist contract;
+4. bounded PTOP contract;
+5. one-register FB contract;
+6. randomized MMU model tests;
+7. byte-exact page-table image tests;
+8. fixed golden vectors;
+9. multi-page/mixed-page address-space tests;
+10. transaction/rollback state-machine tests;
+11. Python, plist and shell syntax checks.
 
-All of the following must be present:
+Expected final line:
 
-- `TuringProbeVersion = 0.2.1`;
-- `TuringProbeBootMode = -tdprobe -tdmmio-read`;
-- `TuringProbeMMIOAccess = Yes`;
-- `TuringProbeMMIOWrites = No`;
-- `TPBAR0MappingCreated = Yes`;
-- `TPBAR0MappingReadOnlyRequested = Yes`;
-- `TPBAR0MappingRetainedAfterProbe = No`;
-- `TPBAR0MappingReleased = Yes`;
-- `TPBAR0MappingLength = 16777216`;
-- `TPMMIOReadCount = 3`;
-- `TPMMIOReadCompleted = Yes`;
-- `TPMMIOChipset = 0x168` and `TPMMIOChipsetIsTU116 = Yes`;
-- `TPMMIOCrystalDecodeValid = Yes`;
-- `TPMMIOVgpuBits = 0`;
-- PCI Command values before map, after map, after reads, and after the full probe
-  are identical;
-- all Bus Master properties remain `No`;
-- no panic, hang, fan/power anomaly, or display corruption occurs.
+```text
+OFFLINE VALIDATION SUITE PASSED
+```
 
-A successful read-only result does not authorise any MMIO write or later GPU
-initialisation step.
+## GitHub build gate
+
+A green workflow must include `build-source-validation.txt`. Confirm that it
+contains PASS output for all ten contracts above before considering the build
+artifact valid.
+
+The build artifact still requires a Mach-O audit for version, exact matching,
+existing read helpers, release path and absence of writes. It does not require a
+real-hardware boot because 0.5.1 contains no new hardware path.
+
+## Hardware policy
+
+Keep `-tdprobe` only. Do not enable the historical one-shot MMIO/PTOP/FB modes.
+No MMU hardware test is defined by this release.

@@ -1,9 +1,9 @@
 {
-  "schema_version": 17,
+  "schema_version": 18,
   "updated": "2026-07-29",
   "repository": "MrNev1s/TuringDarwin",
   "verified_runtime_version": "0.4.0-fb-capacity-read-only",
-  "development_version": "0.5.0",
+  "development_version": "0.5.1",
   "target": {
     "bdf": "01:00.0",
     "vendor_id": "10DE",
@@ -233,10 +233,10 @@
       "user_client": false
     }
   },
-  "next_gate": "Add fixed NVIDIA-derived golden vectors, mixed-page/multi-page conflict tests, and CPU-only allocator/state-machine design; no hardware access",
-  "current_stage": "TU102/TU116 4KiB/64KiB/2MiB page tables cross-checked against NVIDIA UVM and tested as byte-exact RAM images",
-  "candidate_version": "0.5.0",
-  "candidate_status": "offline-mmu-model-uvm-crosschecked-image-tested-no-hardware-access",
+  "next_gate": "GitHub Actions build and Mach-O audit only; do not install or boot. Then design isolated memory allocation/write/readback offline.",
+  "current_stage": "TuringProbe 0.5.1 complete offline MMU validation and rollback design passed locally; no new hardware path",
+  "candidate_version": "0.5.1",
+  "candidate_status": "source-implemented-complete-offline-validation-pass-not-built",
   "candidate_mmio": {
     "bar": 0,
     "mapping": "kIOMapReadOnly, explicit IOMemoryMap pointer, mandatory release and nullptr clear",
@@ -298,32 +298,6 @@
       "source_commit": "89b752805cc87032e9b7dc8cb3c990ac4fb66f2b"
     }
   ],
-  "candidate_artifact": {
-    "version": "0.4.0",
-    "source_commit": "e8c729e06ffe381f56abad98f8896ea294adfb44",
-    "build_result": "success",
-    "xcode": "16.2",
-    "sdk": "15.2",
-    "mac_kernel_sdk_commit": "05094e5e88cec7caedbfb35e8449ed0db94bf95b",
-    "architecture": "x86_64",
-    "macho_uuid": "5830AA6F-E4D0-34F0-A49E-00C53461D535",
-    "outer_zip_sha256": "2f3e53a0709c0e259b4eb3a77c47c688986d80e8d30146259da45afcc2337e85",
-    "kext_zip_sha256": "1c53817a7565da75dcd0a90dddf5ca7034f3390a70b83ecbb51f4775eddc9b33",
-    "binary_sha256": "f286d15537bcbe8a5f921d6c39831fc2902468bb0fa2d7be0bf6558319f74659",
-    "info_plist_sha256": "2b1d2ec4cece285aa81121f0bf6258122850ff353df370a202b4b22327a7a21b",
-    "build_log_sha256": "5b6b02219faf84a637e04f203395aa5a3464f01ae325dd48d21419c807aa6e4c",
-    "manifest_sha256": "175bb1cfc7f7a8438fa67e7ce132df7913685256c7632def5b27cf480b92ff0d",
-    "binary_audit": "pass",
-    "hardware_booted": true,
-    "authorized_boot_mode": "-tdprobe -tdmmio-read",
-    "blocked_boot_modes": [
-      "-tdprobe -tdmmio-read -tdtop-read",
-      "-tdprobe -tdmmio-read -tdfb-read",
-      "-tdunsafe"
-    ],
-    "kextutil_check": "inconclusive-unsupported-kmutil-mode",
-    "hardware_boot_mode_verified": "-tdprobe"
-  },
   "candidate_top": {
     "status": "hardware-verified-pass",
     "writes_authorized": false,
@@ -484,7 +458,7 @@
     "mmu_translation_proven": false
   },
   "mmu_research": {
-    "status": "offline-model-implemented",
+    "status": "complete-offline-validation-implemented",
     "hardware_register_whitelist": [],
     "hardware_reads_authorized": false,
     "hardware_writes_authorized": false,
@@ -502,7 +476,10 @@
     },
     "model_files": [
       "research/tu102_mmu_model.py",
-      "tools/test-mmu-model.py",
+      "research/tu102_page_table_image.py",
+      "research/tu102_address_space.py",
+      "research/mmu_transaction_plan.py",
+      "research/mmu-golden-vectors.json",
       "research/mmu-register-exclusion-matrix.csv"
     ],
     "first_future_mapping_profile": {
@@ -513,10 +490,68 @@
       "read_only_initially": true,
       "page_count": 1,
       "authorized_for_hardware": false
+    },
+    "compiled_artifact": {
+      "status": "offline-audit-pass",
+      "model_compiled_into_kext": false,
+      "mmu_register_reads": 0,
+      "new_mmio_offsets": [],
+      "hardware_helpers_unchanged_from_v0_4_0": true,
+      "static_metadata": {
+        "dma_address_bits": 47,
+        "virtual_address_bits": 49,
+        "small_page_shift": 12,
+        "small_page_kib": 4,
+        "big_page_shift": 16,
+        "big_page_kib": 64,
+        "direct_page_shift": 21,
+        "direct_page_mib": 2
+      },
+      "offline_tests_rerun": {
+        "mmu_model": "pass",
+        "page_table_image": "pass",
+        "device_access": 0
+      }
+    },
+    "test_files": [
+      "tools/test-mmu-model.py",
+      "tools/test-page-table-image.py",
+      "tools/test-golden-vectors.py",
+      "tools/test-address-space.py",
+      "tools/test-transaction-plan.py"
+    ],
+    "validation": {
+      "va_round_trip_vectors": 60000,
+      "pte_pde_random_vectors": 60000,
+      "single_image_round_trips": 30000,
+      "fixed_va_vectors": 3,
+      "fixed_pte_vectors": 4,
+      "fixed_pde_vectors": 2,
+      "fixed_instance_vectors": 1,
+      "sampled_multi_page_translations": 12025,
+      "page_sizes_bytes": [
+        4096,
+        65536,
+        2097152
+      ],
+      "mixed_page_pd0_test": "pass",
+      "promotion_demotion_test": "pass",
+      "alias_policy_test": "pass",
+      "boundary_tests": "pass",
+      "transaction_rollback_test": "pass",
+      "device_access": 0
+    },
+    "transaction_plan": {
+      "hardware_eligible": false,
+      "offline_prefix_proven": true,
+      "first_blocked_step": "stage-tables-in-device-memory",
+      "blocked_reason": "no authorised VRAM allocator or CPU write/readback inverse",
+      "hardware_steps_have_timeouts": true,
+      "unproven_inverses_are_not_treated_as_success": true
     }
   },
   "candidate_mmu": {
-    "status": "offline-only",
+    "status": "offline-complete-validation-pass",
     "hardware_whitelist": [],
     "new_boot_args": [],
     "new_mmio_reads": 0,
@@ -536,6 +571,54 @@
     "compression_authorized": false,
     "hardware_mapping_proven": false,
     "translation_proven": false,
-    "open_kind_selection_question": true
+    "open_kind_selection_question": false,
+    "golden_vectors": "pass",
+    "multi_page_builder": "pass",
+    "mixed_page_builder": "pass",
+    "promotion_demotion": "pass",
+    "transaction_hardware_eligible": false
+  },
+  "last_compiled_artifact": {
+    "version": "0.5.0",
+    "source_commit_reported": "053519a6b32589c7828cf22679ad06265eb97edf",
+    "build_result": "success",
+    "xcode": "16.2",
+    "sdk": "15.2",
+    "mac_kernel_sdk_commit": "05094e5e88cec7caedbfb35e8449ed0db94bf95b",
+    "architecture": "x86_64",
+    "macho_uuid": "49C45C8E-33E4-3A74-931E-34F87072F0BF",
+    "outer_zip_sha256": "b97d725524513800d40c6dbcf3b9a15b1f61b7bee6534ff66ea92702820da2ba",
+    "kext_zip_sha256": "25bb2bb49ed527e466b3e5d7f010d507ecef23b8d438cea4421abdbb7af63b27",
+    "binary_sha256": "013823b58797411048edc0fa99528036ca233a9126fb23efa66b67a842815b96",
+    "info_plist_sha256": "f5db224f4d3bcd556e90d6c94c2053f57fd4ea133f0acb6f7e78700b052da334",
+    "binary_audit": "pass",
+    "hardware_booted": false,
+    "hardware_boot_required": false,
+    "hardware_boot_authorized": false,
+    "new_hardware_accessors": 0,
+    "project_symbol_set_identical_to_v0_4_0": true,
+    "ci_gap": [
+      "tools/test-mmu-model.py not run by GitHub validation step",
+      "tools/test-page-table-image.py not run by GitHub validation step"
+    ]
+  },
+  "candidate_source": {
+    "version": "0.5.1",
+    "status": "locally-validated-not-built",
+    "new_hardware_accessors": 0,
+    "new_mmio_offsets": [],
+    "new_boot_args": [],
+    "hardware_boot_required": false,
+    "hardware_boot_authorized": false,
+    "validation_entry_point": "tools/run-offline-validation.sh",
+    "ci_triggers": [
+      "research/**",
+      "docs/**",
+      "tools/**",
+      "kext/**",
+      "include/**"
+    ],
+    "ci_gap_from_0_5_0_resolved": true,
+    "unsupported_kextutil_check_removed": true
   }
 }

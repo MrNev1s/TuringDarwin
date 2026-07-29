@@ -589,3 +589,83 @@ reset, power, FIFO, channel, engine or user-client path is introduced.
 Add fixed NVIDIA-derived golden vectors, multi-page/mixed-page conflict tests
 and a CPU-only allocator/state-machine design. No hardware build or boot is
 required. No MMIO write or new hardware offset is authorised.
+
+
+## 20. TuringProbe 0.5.0 compiled research artifact
+
+**[OFFLINE BUILD/BINARY AUDIT — PASS; NO HARDWARE BOOT]**
+
+- source commit reported by artifact: `053519a6b32589c7828cf22679ad06265eb97edf`;
+- Xcode 16.2, SDK 15.2, x86_64;
+- Mach-O UUID `49C45C8E-33E4-3A74-931E-34F87072F0BF`;
+- outer artifact SHA-256 `b97d725524513800d40c6dbcf3b9a15b1f61b7bee6534ff66ea92702820da2ba`;
+- inner kext ZIP SHA-256 `25bb2bb49ed527e466b3e5d7f010d507ecef23b8d438cea4421abdbb7af63b27`;
+- executable SHA-256 `013823b58797411048edc0fa99528036ca233a9126fb23efa66b67a842815b96`;
+- compiled project symbol set is unchanged from v0.4.0;
+- identity, PTOP and FB read helpers are unchanged from v0.4.0;
+- no new MMU hardware accessor, PDB/BAR/TLB path or write path exists;
+- corrected MMU values are static source metadata only: 49-bit VA, 4 KiB
+  small pages and 64 KiB big pages;
+- independent MMU-model and page-table-image suites passed again with zero
+  device access.
+
+The GitHub source-validation step omitted the two offline MMU model suites;
+this is a CI coverage gap, not a binary defect. Add both suites to the next
+workflow revision.
+
+This release must not be installed merely because it compiled. A real-hardware
+boot would produce no new evidence. Keep the verified test EFI on `-tdprobe`
+only. No new MMIO offset or write is authorised.
+
+## 21. TuringProbe 0.5.1 complete offline MMU validation
+
+**[SOURCE IMPLEMENTED AND LOCALLY VALIDATED — NO HARDWARE BOOT]**
+
+0.5.1 closes the CI and modelling gaps identified during the 0.5.0 artifact
+audit.
+
+Added:
+
+- fixed source-derived golden vectors for VA, PTE, PDE and instance/PDB words;
+- a deterministic multi-page address-space builder;
+- 4 KiB, 64 KiB and 2 MiB range mappings;
+- leaf, PD0 and 128 TiB root-index boundary tests;
+- mixed 4 KiB/64 KiB PD0 halves;
+- explicit physical-alias opt-in and virtual-overlap rejection;
+- 512×4 KiB to 2 MiB promotion and exact demotion round-trip;
+- transaction/evidence/timeout/rollback state machine;
+- a single complete validation script used by GitHub Actions and tools/build.sh.
+
+Validation results:
+
+- 60,000 VA split/compose vectors;
+- 60,000 randomized PTE/PDE vectors;
+- 30,000 complete single-image build/walk vectors;
+- 4 fixed PTE vectors including the maximum aligned 47-bit address;
+- 12,025 sampled multi-page translations;
+- all offline failure injection points roll back to the safe baseline;
+- the first device-memory write remains explicitly blocked;
+- zero MMIO and zero device access.
+
+CI fixes:
+
+- research/** and docs/** changes trigger the workflow;
+- all MMU suites are mandatory before Xcode compilation;
+- local and CI builds use the same validation entry point;
+- unsupported kextutil -n invocation removed;
+- manifest states mmu_hardware_whitelist=EMPTY.
+
+The kext version is advanced for provenance, but no new hardware accessor,
+boot argument, MMIO offset or write path is added. A 0.5.1 hardware boot is not
+required or authorised.
+
+### Next gate
+
+Build 0.5.1 in GitHub Actions and audit the resulting Mach-O only to confirm
+that the hardware symbol/read surface remains unchanged from 0.5.0/0.4.0 and
+that the complete validation log is packaged. Do not install the kext in EFI.
+
+After artifact audit, continue research on the first missing primitive: a
+bounded, isolated memory-allocation and CPU write/readback design. No actual
+VRAM allocation or write is authorised.
+

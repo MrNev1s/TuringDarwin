@@ -27,7 +27,7 @@ bool TuringProbe::start(IOService *provider) {
     }
 
     if (bootArgumentPresent("-tdunsafe")) {
-        TD_LOG("v0.5.0 rejects -tdunsafe");
+        TD_LOG("v0.5.1 rejects -tdunsafe");
         return false;
     }
 
@@ -48,7 +48,7 @@ bool TuringProbe::start(IOService *provider) {
         return false;
     }
     if (topRequested && fbMmuRequested) {
-        TD_LOG("refusing simultaneous -tdtop-read and -tdfb-read in v0.5.0");
+        TD_LOG("refusing simultaneous -tdtop-read and -tdfb-read in v0.5.1");
         return false;
     }
 
@@ -120,7 +120,7 @@ bool TuringProbe::start(IOService *provider) {
     setProperty("TuringProbeSafeReadOnly", kOSBooleanTrue);
     setProperty("TuringProbeProbeCompleted", kOSBooleanTrue);
     setProperty("TuringProbeProbeSchemaVersion", "5");
-    setProperty("TuringProbeVersion", "0.5.0");
+    setProperty("TuringProbeVersion", "0.5.1");
     setProperty(
         "TuringProbeBootMode",
         topRequested ? "-tdprobe -tdmmio-read -tdtop-read" :
@@ -128,10 +128,10 @@ bool TuringProbe::start(IOService *provider) {
         (mmioRequested ? "-tdprobe -tdmmio-read" : "-tdprobe")));
     setProperty(
         "TuringProbeMilestone",
-        topRequested ? "BAR0-TOP-INVENTORY-READ-ONLY-V0.5.0" :
-        (fbMmuRequested ? "BAR0-FB-MMU-PROFILE-READ-ONLY-V0.5.0" :
-        (mmioRequested ? "BAR0-IDENTITY-READ-ONLY-V0.5.0" :
-                         "PCI-CONFIG-READ-ONLY-COMPAT-V0.5.0")));
+        topRequested ? "BAR0-TOP-INVENTORY-READ-ONLY-V0.5.1" :
+        (fbMmuRequested ? "BAR0-FB-MMU-PROFILE-READ-ONLY-V0.5.1" :
+        (mmioRequested ? "BAR0-IDENTITY-READ-ONLY-V0.5.1" :
+                         "PCI-CONFIG-READ-ONLY-COMPAT-V0.5.1")));
     setProperty("TuringProbeTarget", "NVIDIA TU116 10DE:2182 / ASUS 1043:8854");
     setProperty("TuringProbePCIConfigWrites", kOSBooleanFalse);
     setProperty("TuringProbeMMIOAccess", mmioCompleted ? kOSBooleanTrue : kOSBooleanFalse);

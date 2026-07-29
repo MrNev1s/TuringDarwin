@@ -1,0 +1,51 @@
+TuringProbe v0.5.1 — GITHUB BUILD INSTRUCTIONS
+Date: 2026-07-29
+
+PURPOSE
+v0.5.1 is an offline MMU correctness and CI release. It does not add a new
+hardware accessor, MMIO offset, boot argument or write path. The resulting
+kext is for artifact/Mach-O audit only and must not be installed in EFI.
+
+UPDATE EXISTING REPOSITORY
+1. Extract TuringDarwin-v0.5.1-OFFLINE-MMU-UPDATE-ONLY.zip.
+2. Copy its contents to the repository root, preserving .github and replacing
+   existing files.
+3. Commit all changes, including new research/, tools/ and docs/ files.
+
+Suggested commit message:
+TuringProbe 0.5.1 complete offline MMU validation
+
+BUILD
+1. Open GitHub Actions.
+2. Select "Build TuringProbe kext".
+3. Run workflow with Configuration = Debug.
+4. Leave MacKernelSDK ref at:
+   05094e5e88cec7caedbfb35e8449ed0db94bf95b
+
+EXPECTED BEFORE XCODE BUILD
+The workflow must run tools/run-offline-validation.sh and show PASS for:
+- legacy safety/PCI/MMIO/PTOP/FB contracts;
+- 60000 VA vectors;
+- 60000 PTE/PDE vectors;
+- 30000 single-image build/walk vectors;
+- fixed golden vectors;
+- 12025 sampled multi-page translations;
+- transaction/rollback contract;
+- zero device access.
+
+EXPECTED ARTIFACT
+TuringProbe-v0.5.1-Debug-x86_64
+
+UPLOAD THE COMPLETE ARTIFACT HERE FOR BINARY AUDIT.
+Do not extract only the kext; the build log, manifest, validation log,
+architecture report, undefined-symbol report and SHA256SUMS are all required.
+
+DO NOT
+- do not copy TuringProbe.kext 0.5.1 into EFI;
+- do not boot it;
+- do not add -tdmmio-read, -tdtop-read or -tdfb-read;
+- do not add an MMU boot argument;
+- do not enable any write path.
+
+REAL MACHINE
+Keep the verified safe configuration with -tdprobe only.

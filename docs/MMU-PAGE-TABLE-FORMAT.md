@@ -1,7 +1,7 @@
 # TU102/TU116 page-table format notes
 
 This document is a concise engineering reference for the offline model. The
-full evidence discussion and safety boundary are in `MMU-RESEARCH-0.5.0.md`.
+full evidence discussion and safety boundary are in `MMU-RESEARCH-0.5.1.md`.
 
 ## Supported leaf sizes
 

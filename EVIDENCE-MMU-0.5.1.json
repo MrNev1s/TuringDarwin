@@ -1,0 +1,75 @@
+{
+  "version": "0.5.1",
+  "date": "2026-07-29",
+  "scope": "complete offline TU102/TU116 MMU validation; zero new hardware access",
+  "primary_sources": [
+    {
+      "project": "Linux Nouveau/NVKM",
+      "revision_observed": "v6.19-rc8-185-g2687c848e578",
+      "files": [
+        "nvkm/subdev/mmu/tu102.c",
+        "nvkm/subdev/mmu/vmmgp100.c",
+        "nvkm/subdev/mmu/vmmtu102.c",
+        "nvkm/subdev/bar/tu102.c"
+      ],
+      "role": "DMA width, kind map, page-table descriptors, PTE/PDE/PDB formulas, operational register exclusion"
+    },
+    {
+      "project": "NVIDIA Open GPU Kernel Modules",
+      "ref": "main",
+      "file": "kernel-open/nvidia-uvm/uvm_turing_mmu.c",
+      "role": "independent 49-bit VA, page-size, dual-PD0 ordering and PTE-field cross-check"
+    }
+  ],
+  "confirmed": {
+    "dma_address_bits": 47,
+    "virtual_address_bits": 49,
+    "page_sizes_bytes": [
+      4096,
+      65536,
+      2097152
+    ],
+    "dual_pd0_order": "low=64KiB/big or direct 2MiB, high=4KiB/small",
+    "logical_kind_count": 16,
+    "invalid_kind": 7,
+    "initial_uncompressed_kind": 0,
+    "compression_authorized": false,
+    "hardware_whitelist": []
+  },
+  "offline_validation": {
+    "va_round_trips": 60000,
+    "pte_pde_random_vectors": 60000,
+    "single_image_build_walk_round_trips": 30000,
+    "fixed_va_vectors": 3,
+    "fixed_pte_vectors": 4,
+    "fixed_pde_vectors": 2,
+    "fixed_instance_vectors": 1,
+    "sampled_multi_page_translations": 12025,
+    "multi_page_4k": "pass",
+    "multi_page_64k": "pass",
+    "multi_page_2m": "pass",
+    "mixed_4k_64k": "pass",
+    "leaf_pd0_root_boundaries": "pass",
+    "alias_policy": "pass",
+    "promotion_demotion": "pass",
+    "transaction_rollback": "pass",
+    "device_access": 0
+  },
+  "ci": {
+    "single_entry_point": "tools/run-offline-validation.sh",
+    "workflow_runs_complete_suite": true,
+    "build_script_runs_complete_suite": true,
+    "research_changes_trigger_ci": true,
+    "kextutil_unsupported_check_removed": true,
+    "manifest_mmu_hardware_whitelist": "EMPTY"
+  },
+  "transaction": {
+    "hardware_eligible": false,
+    "offline_prefix_proven": true,
+    "first_blocked_step": "stage-tables-in-device-memory",
+    "blocker": "no authorised isolated VRAM allocator and CPU write/readback inverse"
+  },
+  "proof_boundary": "software modelling and CI only; no page table accepted by hardware, no VRAM write, PDB programming, TLB invalidation or translation proven",
+  "hardware_boot_required": false,
+  "hardware_boot_authorized": false
+}

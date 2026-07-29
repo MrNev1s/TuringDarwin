@@ -28,8 +28,8 @@ GLOBALLY_FORBIDDEN = {
     r"\bIODMACommand\b": "DMA command",
     r"\bIOBufferMemoryDescriptor\b": "buffer suitable for later DMA",
     r"\bIOUserClient\b": "user client surface",
-    r"\bIOCommandGate\b": "command gate not authorised in v0.4",
-    r"\bIOWorkLoop\b": "work loop not authorised in v0.4",
+    r"\bIOCommandGate\b": "command gate not authorised in v0.5.1",
+    r"\bIOWorkLoop\b": "work loop not authorised in v0.5.1",
     r"\bioWrite(?:8|16|32)\b": "I/O-space write",
     r"\bIOMappedWrite(?:8|16|32|64)\b": "mapped MMIO write",
     r"\bOSWrite(?:Little|Big)Int(?:8|16|32|64)\b": "memory write primitive",
@@ -204,20 +204,85 @@ if "TopInventory.cpp" not in pbx or "TopInventory.hpp" not in pbx:
     errors.append("project.pbxproj: TOP inventory module is not included")
 if "FbMmuInventory.cpp" not in pbx or "FbMmuInventory.hpp" not in pbx:
     errors.append("project.pbxproj: FB/MMU inventory module is not included")
-if pbx.count("MODULE_VERSION = 0.5.0") != 2:
-    errors.append("project.pbxproj: module version must be 0.5.0 in both configurations")
+if pbx.count("MODULE_VERSION = 0.5.1") != 2:
+    errors.append("project.pbxproj: module version must be 0.5.1 in both configurations")
 
 build_sh = (ROOT / "tools/build.sh").read_text(encoding="utf-8")
-if 'turingprobe_version=0.5.0' not in build_sh:
-    errors.append("tools/build.sh: manifest version must be 0.5.0")
+if 'turingprobe_version=0.5.1' not in build_sh:
+    errors.append("tools/build.sh: manifest version must be 0.5.1")
 if 'mmio_fb_inventory=1x32@0x100ce0' not in build_sh:
     errors.append("tools/build.sh: FB inventory manifest entry missing")
 if 'fb_compile_gate=TURINGPROBE_ENABLE_FB_READ=1' not in build_sh:
     errors.append("tools/build.sh: dedicated FB compile gate manifest entry missing")
+
+
+# Offline MMU research code must remain physically incapable of touching IOKit
+# or an MMIO mapping. These tokens are rejected even in comments so any future
+# device-facing work must be introduced through an explicit reviewed gate.
+RESEARCH_REQUIRED = {
+    Path("research/tu102_mmu_model.py"),
+    Path("research/tu102_page_table_image.py"),
+    Path("research/tu102_address_space.py"),
+    Path("research/mmu_transaction_plan.py"),
+    Path("research/mmu-golden-vectors.json"),
+}
+RESEARCH_FORBIDDEN_TOKENS = (
+    "IOMemoryMap", "IOPCIDevice", "OSReadLittleInt32", "OSWriteLittleInt32",
+    "configRead32", "configWrite32", "mmap", "/dev/", "ioreg", "kmutil",
+    "subprocess", "ctypes", "socket", "requests", "urllib",
+)
+for rel in sorted(RESEARCH_REQUIRED):
+    path = ROOT / rel
+    if not path.exists():
+        errors.append(f"{rel}: required offline MMU research file missing")
+        continue
+    text = path.read_text(encoding="utf-8")
+    if rel.suffix == ".py":
+        for token in RESEARCH_FORBIDDEN_TOKENS:
+            if token in text:
+                errors.append(f"{rel}: forbidden device/network token in offline model: {token}")
+
+if 'bootArgumentPresent("-tdmmu-read")' in main or "-tdmmu-read" in main:
+    errors.append("TuringProbe.cpp: no MMU hardware boot argument is authorised")
+
+for research_name in (
+    "tu102_mmu_model.py", "tu102_page_table_image.py",
+    "tu102_address_space.py", "mmu_transaction_plan.py",
+):
+    if research_name in pbx:
+        errors.append(f"project.pbxproj: offline research file must not be compiled: {research_name}")
+
+workflow = (ROOT / ".github/workflows/build-kext.yml").read_text(encoding="utf-8")
+required_workflow_tokens = (
+    "research/**",
+    "bash tools/run-offline-validation.sh",
+    "tools/test-mmu-model.py",
+    "tools/test-page-table-image.py",
+    "tools/test-golden-vectors.py",
+    "tools/test-address-space.py",
+    "tools/test-transaction-plan.py",
+)
+validation_script = (ROOT / "tools/run-offline-validation.sh").read_text(encoding="utf-8")
+for token in required_workflow_tokens:
+    if token == "research/**":
+        if token not in workflow:
+            errors.append("build workflow: research/** changes must trigger CI")
+    elif token == "bash tools/run-offline-validation.sh":
+        if token not in workflow:
+            errors.append("build workflow: complete validation script is not invoked")
+    elif token not in validation_script:
+        errors.append(f"run-offline-validation.sh: missing required suite {token}")
+
+if 'bash "$ROOT/tools/run-offline-validation.sh"' not in build_sh:
+    errors.append("tools/build.sh: complete offline validation suite must run before build")
+if "mmu_hardware_whitelist=EMPTY" not in build_sh:
+    errors.append("tools/build.sh: manifest must state empty MMU hardware whitelist")
+if "kextutil -n" in build_sh:
+    errors.append("tools/build.sh: unsupported kextutil -n check must not be used")
 
 if errors:
     print("SAFETY AUDIT FAILED", file=sys.stderr)
     print("\n".join(errors), file=sys.stderr)
     raise SystemExit(1)
 
-print("SAFETY AUDIT PASSED: v0.5.0 adds offline MMU modelling and no new hardware access")
+print("SAFETY AUDIT PASSED: v0.5.1 adds offline MMU modelling and no new hardware access")

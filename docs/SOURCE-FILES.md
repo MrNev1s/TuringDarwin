@@ -1,42 +1,67 @@
-# Exact source and support file list for v0.2.1
+# Source and support files — v0.5.1
 
 ## Canonical state
 
 - `PROJECT_STATE.md` — authoritative human-readable hand-off.
 - `PROJECT_STATE.json` — machine-readable project state.
-- `EVIDENCE.json` — evidence and input/build provenance.
+- `EVIDENCE.json` — base hardware and VBIOS provenance.
+- `EVIDENCE-MMU-0.5.1.json` — current offline MMU evidence.
 
 ## Kernel target
 
 - `kext/TuringProbe/Info.plist` — exact PCI personality and bundle metadata.
-- `kext/TuringProbe/TuringProbe.hpp/.cpp` — fail-closed boot gates, exact
-  target check, lifecycle, mode selection, and Command Register invariant.
-- `kext/TuringProbe/PCIConfig.hpp/.cpp` — PCI identity/header snapshots and
-  registry paths.
-- `kext/TuringProbe/CapabilityParser.hpp/.cpp` — bounded capability walks,
-  names, PCIe/MSI telemetry, and full read-only ReBAR decoder.
-- `kext/TuringProbe/BARInspector.hpp/.cpp` — BAR and IODeviceMemory metadata.
-- `kext/TuringProbe/MMIOReadOnly.hpp/.cpp` — sole read-only BAR0 mapping and
-  three-register access module.
-- `kext/TuringProbe/Logging.hpp` — bounded kernel log prefix.
-- `include/TuringDeviceIds.hpp` — exact target IDs.
-- `include/TuringTypes.hpp` — fixed-width identity type.
-- `include/TuringRegisters.hpp` — three-entry MMIO whitelist and decode masks.
+- `kext/TuringProbe/TuringProbe.hpp/.cpp` — fail-closed boot gates, lifecycle
+  and PCI Command invariants.
+- `kext/TuringProbe/PCIConfig.hpp/.cpp` — PCI identity/header telemetry.
+- `kext/TuringProbe/CapabilityParser.hpp/.cpp` — bounded PCI capabilities and
+  ReBAR decoding.
+- `kext/TuringProbe/BARInspector.hpp/.cpp` — BAR metadata only.
+- `kext/TuringProbe/MMIOReadOnly.hpp/.cpp` — existing short-lived read-only BAR0
+  mapping and three identity reads.
+- `kext/TuringProbe/TopInventory.hpp/.cpp` — existing bounded PTOP inventory.
+- `kext/TuringProbe/FbMmuInventory.hpp/.cpp` — existing one-register VRAM
+  capacity read and static MMU metadata.
+- `include/TuringRegisters.hpp` — immutable existing read offsets and constants.
 
-## Build and validation
+No 0.5.1 research Python file is included in the Xcode project.
 
-- `TuringProbe.xcodeproj/project.pbxproj`
-- `.github/workflows/build-kext.yml`
-- `MacKernelSDK.lock.example`
-- `tools/bootstrap-sdk.sh`
-- `tools/build.sh`
+## Offline MMU research
+
+- `research/tu102_mmu_model.py` — entry and address geometry model.
+- `research/tu102_page_table_image.py` — single-mapping byte images.
+- `research/tu102_address_space.py` — deterministic multi-page builder/walker.
+- `research/mmu_transaction_plan.py` — transaction and rollback model.
+- `research/mmu-golden-vectors.json` — fixed conformance vectors.
+- `research/mmu-register-exclusion-matrix.csv` — operational register exclusion.
+
+## Complete validation
+
+- `tools/run-offline-validation.sh` — canonical validation entry point.
 - `tools/safety-audit.py`
 - `tools/test-decoder-contract.py`
 - `tools/test-mmio-contract.py`
-- `tools/collect-macos.sh`
-- remaining offline PCI/VBIOS/EDID tools under `tools/`.
+- `tools/test-top-contract.py`
+- `tools/test-fb-mmu-contract.py`
+- `tools/test-mmu-model.py`
+- `tools/test-page-table-image.py`
+- `tools/test-golden-vectors.py`
+- `tools/test-address-space.py`
+- `tools/test-transaction-plan.py`
 
-## Documentation
+## Build
 
-Key documents are `MMIO-READ-PLAN.md`, `REGISTER-WHITELIST.md`, `SAFETY.md`,
-`TESTING.md`, `RESULT-MATRIX.md`, and the root `PROJECT_STATE.md`.
+- `TuringProbe.xcodeproj/project.pbxproj`
+- `.github/workflows/build-kext.yml`
+- `tools/build.sh`
+- `tools/bootstrap-sdk.sh`
+- `MacKernelSDK.lock.example`
+
+## Current documentation
+
+- `MMU-RESEARCH-0.5.1.md`
+- `MMU-PAGE-TABLE-FORMAT.md`
+- `MMU-HARDWARE-TRANSACTION-0.5.1.md`
+- `MMU-ROLLBACK-MATRIX-0.5.1.md`
+- `MMU-REGISTER-EXCLUSION.md`
+- `TESTING.md`
+- `GITHUB-ACTIONS.md`

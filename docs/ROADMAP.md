@@ -2,22 +2,27 @@
 
 | Stage | Scope | Status |
 |---|---|---|
-| 0.1.0 | Exact PCI match, config/capability walk, BAR descriptors | Built and real-hardware verified |
-| 0.1.1 | Command invariant, named capabilities, complete ReBAR decode | Built and real-hardware verified |
-| 0.3.0 | BAR0 read-only map and three-register whitelist | Source implemented; build/binary/live gates pending |
-| 0.2.x | Expand only proven read-only identification telemetry | Blocked on 0.3.0 hardware result |
-| 0.3.x | Offline full VBIOS/BIT parser and test vectors | Structural verifier exists; full parser pending |
-| 1.x | Memory manager, GPU VM, channels, FIFO, Copy Engine | Research only; no implementation |
-| 2.x | Dedicated userspace compute/Vulkan interface | Architectural research only |
-| 3.x | Display/modeset/framebuffer | Architectural research only |
+| 0.1.x | Exact PCI match, capability and BAR inventory | Real-hardware verified |
+| 0.2.1 | Three fixed BAR0 identity reads | Real-hardware verified |
+| 0.3.0 | Bounded PTOP topology inventory | Real-hardware verified |
+| 0.4.0 | One-register physical VRAM capacity decode | Real-hardware verified: 6 GiB |
+| 0.5.0 | TU102/TU116 page-table format model | Offline verified and built |
+| 0.5.1 | Golden vectors, multi-page builder, rollback design, complete CI | Source implemented; local PASS; GitHub build pending |
+| 0.6.x candidate | Isolated memory allocation/write/readback design | Research only; no hardware implementation |
+| 1.x | GPU VM activation, channels/FIFO, Copy Engine | Not authorised |
+| 2.x | Compute/Vulkan userspace interface | Architectural research |
+| 3.x | Display/modeset/framebuffer | Architectural research |
 | 4.x | NVK Darwin winsys/port | Long-term, low single-developer feasibility |
 | 5.x | WindowServer/Metal integration | Private stack; potentially impractical |
 
-The next authorised action is only to build and audit 0.3.0. No MMIO write,
-DMA, firmware, interrupt, reset, or command submission stage is authorised.
+## Current next gate
 
-## Current candidate: 0.4.0
+Build 0.5.1 with GitHub Actions and audit the Mach-O only. The purpose is to
+confirm that all offline suites ran and that the kext hardware access surface
+remains unchanged. Do not install or boot 0.5.1.
 
-One-register FB capacity inventory plus source-only TU102 MMU architecture
-profile. Source implemented; Xcode artifact and hardware gates pending. This is
-still discovery only and does not allocate or map GPU memory.
+After that audit, continue offline design of the first missing primitive:
+bounded isolated memory allocation and CPU write/readback with a proven inverse.
+
+No MMU register, VRAM write, PDB programming, BAR1/BAR2 programming, TLB
+invalidation, DMA, interrupt or command submission is authorised.

@@ -16,9 +16,7 @@ SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
 [[ -d "$ROOT/MacKernelSDK/Headers" ]] || { echo "Run tools/bootstrap-sdk.sh first." >&2; exit 2; }
 [[ -f "$ROOT/MacKernelSDK.lock" ]] || { echo "Missing MacKernelSDK.lock." >&2; exit 2; }
 
-python3 "$ROOT/tools/safety-audit.py"
-python3 "$ROOT/tools/test-decoder-contract.py"
-python3 "$ROOT/tools/test-mmio-contract.py"
+bash "$ROOT/tools/run-offline-validation.sh"
 
 # Do not pass `clean build` to xcodebuild while CONFIGURATION_BUILD_DIR lives
 # inside a directory created by this script. Xcode 16 refuses to delete such
@@ -42,13 +40,16 @@ mkdir -p "$OUTPUT"
   echo "sdk_version=$(xcrun --sdk macosx --show-sdk-version)"
   echo "sdk_commit=$(git -C "$ROOT/MacKernelSDK" rev-parse HEAD)"
   echo "source_commit=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo uncommitted-source-tree)"
-  echo "turingprobe_version=0.5.0"
+  echo "turingprobe_version=0.5.1"
   echo "mmio_compile_gate=TURINGPROBE_ENABLE_MMIO_READ=1"
   echo "fb_compile_gate=TURINGPROBE_ENABLE_FB_READ=1"
   echo "mmio_identity_whitelist=0x000004,0x000000,0x101000"
   echo "mmio_top_inventory=64x32@0x022700..0x0227fc"
   echo "mmio_fb_inventory=1x32@0x100ce0"
   echo "mmio_modes=-tdprobe;-tdprobe+-tdmmio-read;-tdprobe+-tdmmio-read+-tdtop-read;-tdprobe+-tdmmio-read+-tdfb-read"
+  echo "mmu_hardware_whitelist=EMPTY"
+  echo "offline_validation=golden-vectors;mmu-model;page-table-images;address-space;transaction-rollback"
+  echo "kextutil_validation=not-applicable-on-macos15"
 } > "$MANIFEST"
 
 set -o pipefail
@@ -64,7 +65,6 @@ KEXT="$OUTPUT/TuringProbe.kext"
 [[ -d "$KEXT" ]] || { echo "Expected output missing: $KEXT" >&2; exit 4; }
 [[ -f "$KEXT/Contents/MacOS/TuringProbe" ]] || { echo "Expected executable missing." >&2; exit 4; }
 plutil -lint "$KEXT/Contents/Info.plist"
-kextutil -n "$KEXT" 2>&1 | tee "$BUILD_ROOT/kextutil-${CONFIGURATION}.txt" || true
 /usr/bin/codesign -dv --verbose=4 "$KEXT" > "$BUILD_ROOT/codesign-${CONFIGURATION}.txt" 2>&1 || true
 shasum -a 256 "$KEXT/Contents/MacOS/TuringProbe" >> "$MANIFEST"
 echo "Built: $KEXT"
