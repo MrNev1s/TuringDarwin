@@ -141,7 +141,7 @@ jobs:
           mkdir -p dist
           ditto -c -k --sequesterRsrc --keepParent \
             "build/$CONFIGURATION/TuringProbe.kext" \
-            "dist/TuringProbe-v0.6.0-$CONFIGURATION-x86_64.kext.zip"
+            "dist/TuringProbe-v0.7.0-$CONFIGURATION-x86_64.kext.zip"
           cp "build/build-$CONFIGURATION.manifest.txt" dist/
           cp "build/build-$CONFIGURATION.log" dist/
           cp build-source-validation.txt dist/
@@ -154,7 +154,7 @@ jobs:
       - name: Upload TuringProbe artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TuringProbe-v0.6.0-${{ steps.build.outputs.configuration }}-x86_64
+          name: TuringProbe-v0.7.0-${{ steps.build.outputs.configuration }}-x86_64
           path: dist/
           if-no-files-found: error
           retention-days: 30
@@ -163,7 +163,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: TuringProbe-v0.6.0-failed-build-logs
+          name: TuringProbe-v0.7.0-failed-build-logs
           path: |
             build/*.log
             build/*.txt
