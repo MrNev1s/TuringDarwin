@@ -14,10 +14,14 @@ assert re.search(r"kPfbVidmemMagnitudeShift\s*=\s*4U", registers)
 assert re.search(r"kPfbVidmemScaleMask\s*=\s*0x0000000FU", registers)
 assert re.search(r"kPfbVidmemReducedCapacityBit\s*=\s*0x40000000U", registers)
 assert "kExpandedFbMmuMmioReadCount == 4U" in registers
-assert "kTu102MmuDmaBits = 47U" in registers
+assert "kTu102MmuDmaAddressBits = 47U" in registers
 assert "kTu102MmuKindCount = 16U" in registers
 assert "kTu102MmuInvalidKind = 0x07U" in registers
-assert "kTu102DefaultBigPageKiB = 16U" in registers
+assert "kTu102MmuVirtualAddressBits = 49U" in registers
+assert "kTu102SmallPageShift = 12U" in registers
+assert "kTu102SmallPageKiB = 4U" in registers
+assert "kTu102BigPageShift = 16U" in registers
+assert "kTu102BigPageKiB = 64U" in registers
 
 assert fb.count("OSReadLittleInt32(") == 1
 assert fb.count("readFbCapacity32(bar0)") == 1
@@ -51,4 +55,4 @@ nominal = ((raw_reduced & 0x3F0) >> 4) << ((raw_reduced & 0xF) + 20)
 reduced = nominal // 16 * 15
 assert reduced == (6 * 1024 * 1024 * 1024) // 16 * 15
 
-print("FB/MMU CONTRACT PASSED: one 0x100CE0 read, 6 GiB decoder, source-only MMU profile")
+print("FB/MMU CONTRACT PASSED: one 0x100CE0 read, 6 GiB decoder, corrected source-only MMU profile")

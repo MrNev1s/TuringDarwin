@@ -1,47 +1,39 @@
-# TuringDarwin / TuringProbe 0.4.0
+# TuringDarwin / TuringProbe 0.5.0 MMU research
 
-`TuringProbe.kext` is a deliberately constrained research probe for the exact
-ASUS GTX 1660 Ti board `10DE:2182 / 1043:8854`. It is not yet a graphics,
-framebuffer, Metal, Vulkan, compute, display or power-management driver.
+TuringProbe is a staged research kext for the exact ASUS TU116 target
+`10DE:2182 / 1043:8854` on macOS Sequoia.
 
-Read `PROJECT_STATE.md` first. It separates real-hardware results from source
-work that has not yet been built or booted.
+## Verified hardware milestones
 
-## Real-hardware baseline
+- PCI discovery and BAR inventory;
+- three-register TU116 identity;
+- bounded PTOP topology inventory;
+- one-register physical VRAM capacity decode: 6 GiB.
 
-TuringProbe 0.3.0 has passed PCI-only, identity-only and bounded PTOP tests on
-macOS 15.7.7. It safely identified TU116 A1 and decoded ten advertised hardware
-blocks while preserving PCI Command `0x0003`, disabled Bus Master and the GOP
-framebuffer.
+## Current 0.5.0 work
 
-## 0.4.0 modes
+Version 0.5.0 adds an **offline** TU102/TU116 page-table model and corrects a
+source-metadata error from 0.4.0: page shift 16 means 64 KiB, not 16 KiB.
 
-- `-tdprobe`: PCI-only, no BAR mapping.
-- `-tdprobe -tdmmio-read`: three verified TU116 identity reads.
-- `-tdprobe -tdmmio-read -tdtop-read`: verified fixed 64-dword PTOP inventory.
-- `-tdprobe -tdmmio-read -tdfb-read`: new candidate mode; three identity reads
-  plus one read of `0x100CE0` to decode physical VRAM capacity.
+No new MMIO offset, boot argument or hardware operation is added.
 
-Version 0.4.0 rejects simultaneous `-tdtop-read` and `-tdfb-read`.
+Read:
 
-The new FB mode publishes a source-backed TU102 MMU profile—47-bit DMA, 16 MMU
-kinds, GP100 VMM class and 16 KiB default big pages—but does not read or modify
-MMU control state.
+- `docs/MMU-RESEARCH-0.5.0.md`
+- `docs/MMU-PAGE-TABLE-FORMAT.md`
+- `docs/MMU-REGISTER-EXCLUSION.md`
 
-## Safety boundary
+Run:
 
-There are no PCI/MMIO writes, DMA, interrupts, firmware, reset, power/clock/fan
-control, FIFO/channels, engine commands, display programming or IOUserClient.
-BAR0 uses `kIOMapReadOnly` and is explicitly released before `start()` returns.
-
-## Build status
-
-The 0.4.0 source passes local structural and contract tests. It has not been
-compiled with Xcode and has not been run on hardware. Keep the verified 0.3.0
-kext and `-tdprobe` in the test EFI until the 0.4.0 GitHub artifact is audited.
-
-Expected GitHub artifact:
-
-```text
-TuringProbe-v0.4.0-Debug-x86_64
+```bash
+python3 tools/test-mmu-model.py
+python3 tools/test-page-table-image.py
+python3 tools/test-fb-mmu-contract.py
+python3 tools/test-mmio-contract.py
+python3 tools/safety-audit.py
 ```
+
+## Hardware policy
+
+Use the verified test EFI with `-tdprobe` only. Do not enable the old MMIO,
+PTOP or FB one-shot modes again. No MMU write or new MMU read is authorised.

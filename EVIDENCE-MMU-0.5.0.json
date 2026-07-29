@@ -1,0 +1,108 @@
+{
+  "version": "0.5.0",
+  "date": "2026-07-29",
+  "scope": "offline TU102/TU116 MMU model; no new hardware access",
+  "confirmed": {
+    "dma_address_bits": 47,
+    "va_bits_derived": 49,
+    "page_sizes_bytes": [
+      4096,
+      65536,
+      2097152
+    ],
+    "descriptor_small": [
+      {
+        "type": "SPT",
+        "bits": 9,
+        "entry_bytes": 8,
+        "align": 4096
+      },
+      {
+        "type": "PD0",
+        "bits": 8,
+        "entry_bytes": 16,
+        "align": 4096
+      },
+      {
+        "type": "PD1",
+        "bits": 9,
+        "entry_bytes": 8,
+        "align": 4096
+      },
+      {
+        "type": "PD2",
+        "bits": 9,
+        "entry_bytes": 8,
+        "align": 4096
+      },
+      {
+        "type": "ROOT",
+        "bits": 2,
+        "entry_bytes": 8,
+        "align": 4096
+      }
+    ],
+    "descriptor_big": [
+      {
+        "type": "LPT",
+        "bits": 5,
+        "entry_bytes": 8,
+        "align": 256
+      },
+      {
+        "type": "PD0",
+        "bits": 8,
+        "entry_bytes": 16,
+        "align": 4096
+      },
+      {
+        "type": "PD1",
+        "bits": 9,
+        "entry_bytes": 8,
+        "align": 4096
+      },
+      {
+        "type": "PD2",
+        "bits": 9,
+        "entry_bytes": 8,
+        "align": 4096
+      },
+      {
+        "type": "ROOT",
+        "bits": 2,
+        "entry_bytes": 8,
+        "align": 4096
+      }
+    ],
+    "nvidia_uvm_crosscheck": {
+      "virtual_address_bits": 49,
+      "page_sizes_bytes": [
+        4096,
+        65536,
+        2097152
+      ],
+      "dual_pd0_order": "low=64KiB/big, high=4KiB/small",
+      "entry_bytes_pd0": 16,
+      "entry_bytes_other": 8
+    },
+    "offline_test_vectors": {
+      "va_round_trips": 60000,
+      "pte_pde_vectors_minimum": 60000,
+      "complete_image_build_walk_round_trips": 30000,
+      "device_access": 0
+    }
+  },
+  "correction": "page shift 16 means 64 KiB, not 16 KiB",
+  "hardware_whitelist": [],
+  "proof_boundary": "software modelling only; no table accepted by GPU and no translation proven",
+  "corrections": [
+    "page shift 16 means 64 KiB, not 16 KiB",
+    "logical kind index must be translated through tu102_mmu_kind on the no-GSP path"
+  ],
+  "open_questions": [
+    "first uncompressed kind selection: Nouveau logical 0 versus NVIDIA generic-memory kind",
+    "instance/PDB ownership and allocation on macOS",
+    "BAR1/BAR2 programming and bounded rollback",
+    "TU102 TLB invalidation transaction"
+  ]
+}

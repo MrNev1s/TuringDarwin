@@ -63,12 +63,19 @@ constexpr UInt32 kPfbVidmemScaleMask = 0x0000000FU;
 constexpr UInt32 kPfbVidmemReducedCapacityBit = 0x40000000U;
 constexpr UInt64 kExpectedTargetVidmemBytes = 6ULL * 1024ULL * 1024ULL * 1024ULL;
 
-// Source-backed architecture profile from Nouveau's tu102_mmu definition.
-// These constants are published as metadata and do not cause extra MMIO reads.
-constexpr UInt32 kTu102MmuDmaBits = 47U;
+// Source-backed architecture profile from Nouveau's tu102_mmu and
+// tu102_vmm/gp100_vmm definitions. These constants are metadata only and do
+// not cause extra MMIO reads.
+constexpr UInt32 kTu102MmuDmaAddressBits = 47U;
+// The descriptor hierarchy covers 2+9+9+8+9+12 = 49 virtual-address bits
+// for 4 KiB pages and 2+9+9+8+5+16 = 49 bits for 64 KiB pages.
+constexpr UInt32 kTu102MmuVirtualAddressBits = 49U;
 constexpr UInt32 kTu102MmuKindCount = 16U;
 constexpr UInt32 kTu102MmuInvalidKind = 0x07U;
-constexpr UInt32 kTu102DefaultBigPageKiB = 16U;
+constexpr UInt32 kTu102SmallPageShift = 12U;
+constexpr UInt32 kTu102SmallPageKiB = 4U;
+constexpr UInt32 kTu102BigPageShift = 16U;
+constexpr UInt32 kTu102BigPageKiB = 64U;
 constexpr UInt8 kTu102MmuKindMap[kTu102MmuKindCount] = {
     0x00U, 0x01U, 0x02U, 0x03U, 0x04U, 0x05U, 0x06U, 0x07U,
     0x06U, 0x06U, 0x02U, 0x01U, 0x03U, 0x04U, 0x05U, 0x07U,
@@ -112,5 +119,10 @@ static_assert(kNvPfbVidmemSizeOffset + 4U <= kExpectedBar0Length,
               "FB capacity register is outside BAR0");
 static_assert(sizeof(kTu102MmuKindMap) == kTu102MmuKindCount,
               "TU102 MMU kind-map size mismatch");
+
+static_assert((1U << (kTu102SmallPageShift - 10U)) == kTu102SmallPageKiB,
+              "small-page shift/size mismatch");
+static_assert((1U << (kTu102BigPageShift - 10U)) == kTu102BigPageKiB,
+              "big-page shift/size mismatch");
 
 } // namespace td

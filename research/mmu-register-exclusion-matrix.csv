@@ -1,0 +1,12 @@
+offset_or_range,name,purpose,observed_access,risk_class,decision,reason
+0xB830A0,NV_VIRTUAL_FUNCTION_MMU_INVALIDATE_PDB,TU102 invalidate PDB low/address,write,operational,REJECT,Nouveau writes the target PDB before triggering invalidation; not a capability register
+0xB830A4,NV_VIRTUAL_FUNCTION_MMU_INVALIDATE_PDB_UPPER,TU102 invalidate PDB upper,write,operational,REJECT,Part of the invalidation command sequence
+0xB830B0,NV_VIRTUAL_FUNCTION_MMU_INVALIDATE,invalidate command/trigger and busy status,write+poll-read,trigger/busy,REJECT,bit31 triggers work; Nouveau polls the same bit for completion
+0x100CB8,GP100 invalidate PDB low,legacy/global invalidate target,write,operational,REJECT,gp100_vmm_invalidate_pdb writes it
+0x100CEC,GP100 invalidate PDB upper,legacy/global invalidate target upper,write,operational,REJECT,gp100_vmm_invalidate_pdb writes it
+0x100CBC,GF100 invalidate trigger,legacy MMU invalidate trigger,write,trigger,REJECT,bit31 queues invalidation
+0x100C80,GF100 invalidate status/free-slot state,queue/status used around invalidate,poll-read,dynamic state,REJECT,read only in a write-driven invalidation sequence; not static capability
+0xB83000+,MMU fault buffer registers,fault ring GET/PUT/status/info,read/write,fault queue,REJECT,queue pointers/status include clear/ack semantics and require configured buffers
+0xB80F40,BAR1 PDB/control,BAR1 page-directory base and enable,write,BAR programming,REJECT,Nouveau programs bit31 and a page-directory address
+0xB80F48,BAR2 PDB/control,BAR2 page-directory base and enable,write,BAR programming,REJECT,Nouveau programs bit31 and a page-directory address
+0xB80F50,BAR1/BAR2 bind status,busy/status after BAR programming,poll-read,dynamic state,REJECT,only meaningful after BAR control writes; not a capability register

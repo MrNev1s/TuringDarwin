@@ -385,7 +385,7 @@ causes the mapping to be released and attachment to fail.
 The candidate also publishes a clearly source-labelled TU102 MMU profile with
 no additional MMIO reads: 47-bit DMA addressing, GF100 MMU/memory classes,
 GP100 VMM class, a 16-entry kind map with invalid kind `0x07`, system-memory
-kinds, and 16 KiB default big pages.
+kinds, and page shift 16 (historically misreported here as 16 KiB; corrected to 64 KiB in section 19).
 
 Safety constraints:
 
@@ -414,3 +414,178 @@ The stale 0.3.0 build-manifest version/whitelist defect has been corrected in
 Build 0.4.0 with GitHub Actions, upload the complete artifact, and audit the
 compiled Mach-O. Until that audit passes, keep the verified 0.3.0 kext and
 `-tdprobe` only. No 0.4.0 hardware boot or `-tdfb-read` use is authorised.
+
+## 15. TuringProbe 0.4.0 compiled artifact
+
+**[OFFLINE VERIFIED; PCI-ONLY HARDWARE BOOT AUTHORISED]**
+
+Build provenance:
+
+- source commit `e8c729e06ffe381f56abad98f8896ea294adfb44`;
+- Xcode 16.2, macOS SDK 15.2, x86_64;
+- MacKernelSDK `05094e5e88cec7caedbfb35e8449ed0db94bf95b`;
+- `BUILD SUCCEEDED`;
+- Mach-O UUID `5830AA6F-E4D0-34F0-A49E-00C53461D535`;
+- outer artifact SHA-256 `2f3e53a0709c0e259b4eb3a77c47c688986d80e8d30146259da45afcc2337e85`;
+- inner kext ZIP SHA-256 `1c53817a7565da75dcd0a90dddf5ca7034f3390a70b83ecbb51f4775eddc9b33`;
+- executable SHA-256 `f286d15537bcbe8a5f921d6c39831fc2902468bb0fa2d7be0bf6558319f74659`;
+- built `Info.plist` SHA-256 `2b1d2ec4cece285aa81121f0bf6258122850ff353df370a202b4b22327a7a21b`.
+
+Binary audit result: **PASS**.
+
+Confirmed in the compiled artifact:
+
+- exact PCI/subsystem matching remains unchanged;
+- both MMIO and FB compile-time gates are enabled;
+- `-tdfb-read` requires `-tdmmio-read`;
+- simultaneous TOP and FB modes are rejected;
+- the three identity reads remain fixed;
+- the optional FB path contains exactly one read at `0x100CE0`;
+- the compiled FB decoder requires exactly 6 GiB;
+- the FB path has no loop or polling;
+- MMU information is source metadata and causes no extra MMIO reads;
+- explicit BAR0 mapping release and pointer clear remain present;
+- no direct PCI/MMIO write, DMA, interrupt, power, user-client or bus-master
+  enable call site was found.
+
+The build manifest metadata defect from 0.3.0 is fixed and now correctly reports
+version 0.4.0, both compile gates and the FB whitelist.
+
+The workflow's kextutil check remains inconclusive because the command is
+routed to an unsupported kmutil mode. It is not counted as a successful check.
+
+The artifact is authorised only for a PCI-only compatibility boot with
+`-tdprobe`. `-tdmmio-read`, `-tdtop-read` and `-tdfb-read` remain prohibited
+until the PCI-only result is reviewed.
+
+
+
+## 16. TuringProbe 0.4.0 PCI-only hardware gate
+
+**[REAL-HARDWARE VERIFIED — PASS]**
+
+- macOS 15.7.7 / build 24G720;
+- version 0.4.0, UUID `5830AA6F-E4D0-34F0-A49E-00C53461D535`;
+- service registered, matched and active;
+- boot mode `-tdprobe`;
+- MMIO access No;
+- TOP inventory access No;
+- FB/MMU inventory access No;
+- PCI Command remained `0x0003`;
+- Bus Master remained disabled;
+- no PCI/MMIO writes, DMA, interrupts, firmware, power changes or user client;
+- GOP remained 1920×1080 ARGB8888;
+- runtime log ZIP SHA-256 `1dbd35178de70bdaf081d3280bd0e5daa1b10190392b1e6a2ad6a01d652abca5`.
+
+One identity-only compatibility boot is now authorised with exactly
+`-tdprobe -tdmmio-read`. `-tdtop-read` and `-tdfb-read` remain prohibited.
+
+
+## 17. TuringProbe 0.4.0 identity-only hardware gate
+
+**[REAL-HARDWARE VERIFIED — PASS]**
+
+- macOS 15.7.7 / build 24G720;
+- version 0.4.0, UUID `5830AA6F-E4D0-34F0-A49E-00C53461D535`;
+- boot mode `-tdprobe -tdmmio-read`;
+- BAR0 read-only mapping created and explicitly released;
+- mapping not retained after probe;
+- exactly three identity reads completed;
+- PTOP read count 0;
+- FB/MMU read count 0;
+- `NV_PMC_BOOT_0 = 0x168000A1`;
+- chipset TU116 `0x168`, revision `0xA1`;
+- strap `0x00400080`, crystal 27 MHz;
+- PCI Command remained `0x0003`;
+- Bus Master remained disabled;
+- GOP remained 1920×1080 ARGB8888;
+- runtime log ZIP SHA-256 `a03e924fbdb1a4ed0d57f4a4dedc8dec1f06ebb3c87285e5e6529a588bbe6f4f`.
+
+One controlled FB-capacity hardware boot is now authorised using exactly
+`-tdprobe -tdmmio-read -tdfb-read`.
+
+The authorised new hardware access is one 32-bit read at `BAR0+0x100CE0`.
+`-tdtop-read` must remain absent. No MMU register, additional offset, polling
+or write path is authorised. A failed FB boot must not be retried.
+
+
+## 18. TuringProbe 0.4.0 FB-capacity hardware milestone
+
+**[REAL-HARDWARE VERIFIED — PASS]**
+
+- boot mode `-tdprobe -tdmmio-read -tdfb-read`;
+- BAR0 read-only mapping created and explicitly released;
+- mapping not retained after probe;
+- exactly 3 identity reads and 1 FB read;
+- total MMIO read count 4;
+- PTOP read count 0;
+- no MMU register was read;
+- `BAR0+0x100CE0 = 0x00000307`;
+- magnitude 48, scale 7, shift 27;
+- decoded capacity `6442450944` bytes / `6144` MiB / 6 GiB;
+- one-sixteenth reduction not active;
+- decoded capacity matches the target board;
+- PCI Command remained `0x0003`;
+- Bus Master remained disabled;
+- no PCI/MMIO writes, DMA, interrupts, firmware, power changes or user client;
+- GOP remained 1920×1080 ARGB8888;
+- runtime log ZIP SHA-256 `860d78a10bf50fe4e3da3a67d1c3ec936c6772aa25197000392b492e15e5599d`.
+
+`system_profiler` still reports 8 MB because macOS is using the generic
+GOP/IONDRV framebuffer rather than a functional NVIDIA graphics driver. That
+display aperture is separate from the 6 GiB physical VRAM value decoded
+directly from the TU116 FB register.
+
+This closes the initial FB-capacity milestone. It does not prove that VRAM can
+yet be allocated, mapped or accessed.
+
+### Next gate
+
+**[DESIGN/RESEARCH ONLY — NO NEW HARDWARE ACCESS AUTHORISED]**
+
+The next candidate milestone is the first actual read-only MMU capability
+inventory. Every proposed MMU offset must be justified from primary sources
+and rejected if it can clear, acknowledge, invalidate, select an indexed
+window, pop a queue, trigger work or otherwise have a read side effect.
+
+Until that review, use `-tdprobe` only. Do not repeat `-tdfb-read`.
+
+
+## 19. TuringProbe 0.5.0 offline MMU research
+
+**[OFFLINE MODEL IMPLEMENTED — NO NEW HARDWARE ACCESS]**
+
+A detailed source audit found no necessary static MMU capability register that
+is clearly side-effect-free. The new MMU hardware whitelist is therefore
+empty. The test EFI remains `-tdprobe` only.
+
+Important correction: v0.4.0 source telemetry called page shift 16 a 16 KiB
+page. That was incorrect; `1 << 16` bytes is 64 KiB. The 6 GiB FB-capacity
+hardware result is unaffected because no MMU register or page table was used.
+
+Version 0.5.0 adds:
+
+- a pure software 4 KiB / 64 KiB TU102 page-table model;
+- a derived 49-bit virtual-address hierarchy distinct from 47-bit DMA width;
+- PTE/PDE/PD0/PDB encoding and decoding helpers;
+- deterministic randomized round-trip and fail-closed tests;
+- a register exclusion matrix for invalidate, fault-buffer and BAR window
+  registers;
+- corrected future MMU metadata properties.
+
+No new boot argument, MMIO offset, MMIO write, DMA, interrupt, firmware,
+reset, power, FIFO, channel, engine or user-client path is introduced.
+
+### Completed in this research package
+
+- independent cross-check against NVIDIA's open Turing UVM implementation;
+- 4 KiB, 64 KiB and 2 MiB hierarchy support;
+- byte-exact synthetic page-table images;
+- 30,000 complete image build/walk round trips;
+- logical-kind fallback correction and fail-closed compression policy.
+
+### Next gate
+
+Add fixed NVIDIA-derived golden vectors, multi-page/mixed-page conflict tests
+and a CPU-only allocator/state-machine design. No hardware build or boot is
+required. No MMIO write or new hardware offset is authorised.

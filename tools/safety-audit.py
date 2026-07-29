@@ -165,10 +165,14 @@ expected_constants = {
     "kTopTableWordCount": 64,
     "kNvPfbVidmemSizeOffset": 0x100CE0,
     "kFbMmuInventoryMmioReadCount": 1,
-    "kTu102MmuDmaBits": 47,
+    "kTu102MmuDmaAddressBits": 47,
+    "kTu102MmuVirtualAddressBits": 49,
     "kTu102MmuKindCount": 16,
     "kTu102MmuInvalidKind": 0x07,
-    "kTu102DefaultBigPageKiB": 16,
+    "kTu102SmallPageShift": 12,
+    "kTu102SmallPageKiB": 4,
+    "kTu102BigPageShift": 16,
+    "kTu102BigPageKiB": 64,
 }
 for name, expected in expected_constants.items():
     match = re.search(rf"constexpr\s+UInt32\s+{name}\s*=\s*(0x[0-9A-Fa-f]+|[0-9]+)U", registers)
@@ -200,12 +204,12 @@ if "TopInventory.cpp" not in pbx or "TopInventory.hpp" not in pbx:
     errors.append("project.pbxproj: TOP inventory module is not included")
 if "FbMmuInventory.cpp" not in pbx or "FbMmuInventory.hpp" not in pbx:
     errors.append("project.pbxproj: FB/MMU inventory module is not included")
-if pbx.count("MODULE_VERSION = 0.4.0") != 2:
-    errors.append("project.pbxproj: module version must be 0.4.0 in both configurations")
+if pbx.count("MODULE_VERSION = 0.5.0") != 2:
+    errors.append("project.pbxproj: module version must be 0.5.0 in both configurations")
 
 build_sh = (ROOT / "tools/build.sh").read_text(encoding="utf-8")
-if 'turingprobe_version=0.4.0' not in build_sh:
-    errors.append("tools/build.sh: manifest version must be 0.4.0")
+if 'turingprobe_version=0.5.0' not in build_sh:
+    errors.append("tools/build.sh: manifest version must be 0.5.0")
 if 'mmio_fb_inventory=1x32@0x100ce0' not in build_sh:
     errors.append("tools/build.sh: FB inventory manifest entry missing")
 if 'fb_compile_gate=TURINGPROBE_ENABLE_FB_READ=1' not in build_sh:
@@ -216,4 +220,4 @@ if errors:
     print("\n".join(errors), file=sys.stderr)
     raise SystemExit(1)
 
-print("SAFETY AUDIT PASSED: v0.4.0 keeps verified modes and adds one 0x100CE0 FB read")
+print("SAFETY AUDIT PASSED: v0.5.0 adds offline MMU modelling and no new hardware access")

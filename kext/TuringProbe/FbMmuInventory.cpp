@@ -71,17 +71,30 @@ bool performReadOnlyFbMmuInventory(const void *bar0, IOService *owner) {
 
     // These MMU values are architecture metadata from Nouveau's tu102_mmu
     // definition, not additional hardware register reads.
-    publishNumber(owner, "TPMMUSourceDmaAddressBits", kTu102MmuDmaBits, 8);
+    publishNumber(owner, "TPMMUSourceDmaAddressBits",
+                  kTu102MmuDmaAddressBits, 8);
+    publishNumber(owner, "TPMMUSourceVirtualAddressBits",
+                  kTu102MmuVirtualAddressBits, 8);
     publishNumber(owner, "TPMMUSourceKindCount", kTu102MmuKindCount, 8);
     publishNumber(owner, "TPMMUSourceInvalidKind", kTu102MmuInvalidKind, 8);
     publishBoolean(owner, "TPMMUSourceKindSystemMemory", true);
+    publishNumber(owner, "TPMMUSourceSmallPageShift",
+                  kTu102SmallPageShift, 8);
+    publishNumber(owner, "TPMMUSourceSmallPageKiB",
+                  kTu102SmallPageKiB, 16);
+    publishNumber(owner, "TPMMUSourceBigPageShift",
+                  kTu102BigPageShift, 8);
+    publishNumber(owner, "TPMMUSourceBigPageKiB",
+                  kTu102BigPageKiB, 16);
+    // Compatibility property retained with the corrected value. v0.4.0
+    // incorrectly confused page shift 16 with 16 KiB; shift 16 is 64 KiB.
     publishNumber(owner, "TPMMUSourceDefaultBigPageKiB",
-                  kTu102DefaultBigPageKiB, 16);
+                  kTu102BigPageKiB, 16);
     owner->setProperty("TPMMUSourceMmuClass", "NVIF_CLASS_MMU_GF100");
     owner->setProperty("TPMMUSourceMemoryClass", "NVIF_CLASS_MEM_GF100");
     owner->setProperty("TPMMUSourceVmmClass", "NVIF_CLASS_VMM_GP100");
     owner->setProperty("TPMMUSourceProfile",
-        "Linux Nouveau tu102_mmu: 47-bit DMA, 16-kind map, system kinds");
+        "Linux Nouveau TU102: 47-bit DMA, derived 49-bit VA, 4K/64K pages");
 
     OSData *kindMap = OSData::withBytes(kTu102MmuKindMap,
                                        sizeof(kTu102MmuKindMap));

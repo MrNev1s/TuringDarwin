@@ -1,0 +1,72 @@
+TuringProbe v0.5.0 OFFLINE MMU RESEARCH VALIDATION
+Date: 2026-07-29
+
+RESULT: PASS FOR OFFLINE RESEARCH PACKAGE
+HARDWARE STATUS: NO NEW HARDWARE ACCESS; NO BUILD OR BOOT REQUIRED
+
+SCOPE
+- exact target remains 10DE:2182 / 1043:8854
+- v0.4.0 hardware milestones preserved
+- no new boot argument
+- no new MMIO offset
+- no MMIO/PCI write path
+- no DMA, interrupts, firmware, reset, power, FIFO, channels or user client
+- hardware whitelist for new MMU registers: EMPTY
+
+PRIMARY-SOURCE CROSS-CHECK
+- Nouveau TU102: 47-bit DMA profile and TU102 kind map
+- Nouveau GP100/TU102 VMM: 4 KiB, 64 KiB and 2 MiB paths
+- NVIDIA open UVM Turing MMU: independent 49-bit VA, page-size, PD0-order and PTE-field cross-check
+- TU102 invalidation/BAR/fault registers retained in exclusion matrix
+
+CORRECTIONS FOUND
+- v0.4.0 metadata interpreted shift 16 as 16 KiB; corrected to 64 KiB
+- first 0.5.0 draft encoded logical kind index directly; corrected to no-GSP TU102 kind-map fallback
+- compression/COMPTAGLINE now fails closed without an authorised firmware path
+
+MODEL RESULTS
+MMU MODEL CONTRACT PASSED
+- 4 KiB, 64 KiB and 2 MiB hierarchies: 49-bit VA
+- 60000 VA round-trip vectors
+- 60000 PTE/PDE randomized vectors
+- logical-kind fallback and compression rejection
+- fail-closed alignment/range/kind checks
+- zero MMIO and zero device access
+PAGE-TABLE IMAGE CONTRACT PASSED
+- 30000 complete synthetic build/walk round trips
+- 4 KiB, 64 KiB and 2 MiB paths
+- verified low=LPT/high=SPT PD0 half ordering
+- verified direct 2 MiB PTE in low PD0 half
+- missing/corrupt/wrong-page-size cases fail closed
+- zero device access
+FB/MMU CONTRACT PASSED: one 0x100CE0 read, 6 GiB decoder, corrected source-only MMU profile
+MMIO CONTRACT PASSED: read-only map, explicit release, identity gate, optional TOP or one-register FB inventory
+TOP CONTRACT PASSED: fixed 64-dword table, bounded parser, Nouveau bitfields verified
+decoder contract passed: TU116 ReBAR entry0 = BAR0, 16 MiB, 3 entries
+SAFETY AUDIT PASSED: v0.5.0 adds offline MMU modelling and no new hardware access
+
+SYNTAX / FORMAT
+- Python compile: PASS
+- shell syntax: PASS
+- plist parse: PASS (kext/TuringProbe/Info.plist)
+- plist parse: PASS (docs/OPENCORE-ENTRY.plist)
+
+STATIC HARDWARE-ACCESS INVENTORY
+- MMIOReadOnly.cpp: one 32-bit read primitive used by the existing identity whitelist
+- TopInventory.cpp: one 32-bit read primitive used by the existing fixed PTOP table
+- FbMmuInventory.cpp: one 32-bit read primitive used by the already verified 0x100CE0 FB register
+- research/*.py: zero OSRead/IOMemoryMap/device access
+- no new MMU hardware accessor exists
+
+OFFLINE VECTOR COUNTS
+- 60,000 virtual-address split/compose round trips
+- 60,000 randomized PTE/PDE vectors
+- 30,000 complete byte-exact table build/walk round trips
+- page sizes: 4 KiB, 64 KiB, 2 MiB
+
+PROOF BOUNDARY
+- No page table has been accepted by the GPU.
+- No VRAM allocation or CPU mapping has been performed.
+- No instance block, BAR1/BAR2 window or TLB invalidation has been programmed.
+- No translation, fault handling, DMA or command submission is proven.
+- Keep the test EFI at -tdprobe only.
