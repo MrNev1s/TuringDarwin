@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "date": "2026-07-29",
+  "version": "0.7.0",
+  "status": "source-implemented-offline-pass-not-built-not-booted",
+  "target": {
+    "pci": "10DE:2182",
+    "subsystem": "1043:8854"
+  },
+  "boot_mode": "-tdprobe -tdhostphys-test",
+  "allocation": {
+    "class": "IOBufferMemoryDescriptor",
+    "capacity_bytes": 4096,
+    "alignment_bytes": 4096,
+    "options": [
+      "kIODirectionNone",
+      "kIOMemoryMapperNone"
+    ],
+    "prepare_called": false,
+    "complete_called": false
+  },
+  "layout": {
+    "prefix_guard_bytes": 64,
+    "payload_bytes": 3968,
+    "suffix_guard_bytes": 64,
+    "expected_checksum_hex": "0xBB8BA5B0A94B2525"
+  },
+  "physical_query": {
+    "count": 1,
+    "offset": 0,
+    "options": "kIOMemoryMapperNone",
+    "required_length": 4096,
+    "required_alignment": 4096,
+    "address_bits": 47
+  },
+  "forbidden": [
+    "DMA",
+    "IODMACommand",
+    "system mapper",
+    "GPU mapping",
+    "VRAM",
+    "MMIO write",
+    "PCI write",
+    "page-table placement",
+    "PDB programming",
+    "BAR1/BAR2 programming",
+    "TLB invalidation",
+    "firmware",
+    "commands"
+  ],
+  "hardware_authorized": false
+}

@@ -6,6 +6,7 @@
 #include "CapabilityParser.hpp"
 #include "Logging.hpp"
 #include "HostMemorySelfTest.hpp"
+#include "HostPhysicalSegmentTest.hpp"
 #include "MMIOReadOnly.hpp"
 #include "PCIConfig.hpp"
 
@@ -28,7 +29,7 @@ bool TuringProbe::start(IOService *provider) {
     }
 
     if (bootArgumentPresent("-tdunsafe")) {
-        TD_LOG("v0.6.0 rejects -tdunsafe");
+        TD_LOG("v0.7.0 rejects -tdunsafe");
         return false;
     }
 
@@ -41,6 +42,7 @@ bool TuringProbe::start(IOService *provider) {
     const bool topRequested = bootArgumentPresent("-tdtop-read");
     const bool fbMmuRequested = bootArgumentPresent("-tdfb-read");
     const bool hostMemoryRequested = bootArgumentPresent("-tdhostmem-test");
+    const bool hostPhysicalRequested = bootArgumentPresent("-tdhostphys-test");
     if (topRequested && !mmioRequested) {
         TD_LOG("refusing -tdtop-read without -tdmmio-read");
         return false;
@@ -50,11 +52,19 @@ bool TuringProbe::start(IOService *provider) {
         return false;
     }
     if (topRequested && fbMmuRequested) {
-        TD_LOG("refusing simultaneous -tdtop-read and -tdfb-read in v0.6.0");
+        TD_LOG("refusing simultaneous -tdtop-read and -tdfb-read in v0.7.0");
         return false;
     }
     if (hostMemoryRequested && mmioRequested) {
         TD_LOG("refusing -tdhostmem-test with any BAR0/MMIO mode");
+        return false;
+    }
+    if (hostPhysicalRequested && mmioRequested) {
+        TD_LOG("refusing -tdhostphys-test with any BAR0/MMIO mode");
+        return false;
+    }
+    if (hostMemoryRequested && hostPhysicalRequested) {
+        TD_LOG("refusing simultaneous host-memory modes in v0.7.0");
         return false;
     }
 
@@ -99,6 +109,18 @@ bool TuringProbe::start(IOService *provider) {
         }
     }
 
+    bool hostPhysicalCompleted = false;
+    if (hostPhysicalRequested) {
+        hostPhysicalCompleted = td::performHostPhysicalSegmentTest(this);
+        if (!hostPhysicalCompleted) {
+            TD_LOG("refusing attachment because host-physical segment test failed");
+            pciDevice_->release();
+            pciDevice_ = nullptr;
+            super::stop(provider);
+            return false;
+        }
+    }
+
     bool mmioCompleted = false;
     if (mmioRequested) {
         mmioCompleted = td::performReadOnlyBar0Probe(
@@ -136,24 +158,26 @@ bool TuringProbe::start(IOService *provider) {
     }
 
     setProperty("TuringProbeSafeReadOnly",
-                hostMemoryRequested ? kOSBooleanFalse : kOSBooleanTrue);
+                (hostMemoryRequested || hostPhysicalRequested) ? kOSBooleanFalse : kOSBooleanTrue);
     setProperty("TuringProbeDeviceAccessReadOnly", kOSBooleanTrue);
     setProperty("TuringProbeProbeCompleted", kOSBooleanTrue);
-    setProperty("TuringProbeProbeSchemaVersion", "6");
-    setProperty("TuringProbeVersion", "0.6.0");
+    setProperty("TuringProbeProbeSchemaVersion", "7");
+    setProperty("TuringProbeVersion", "0.7.0");
     setProperty(
         "TuringProbeBootMode",
-        hostMemoryRequested ? "-tdprobe -tdhostmem-test" :
+        hostPhysicalRequested ? "-tdprobe -tdhostphys-test" :
+        (hostMemoryRequested ? "-tdprobe -tdhostmem-test" :
         (topRequested ? "-tdprobe -tdmmio-read -tdtop-read" :
         (fbMmuRequested ? "-tdprobe -tdmmio-read -tdfb-read" :
-        (mmioRequested ? "-tdprobe -tdmmio-read" : "-tdprobe"))));
+        (mmioRequested ? "-tdprobe -tdmmio-read" : "-tdprobe")))));
     setProperty(
         "TuringProbeMilestone",
-        hostMemoryRequested ? "HOST-MEMORY-CPU-WRITE-READBACK-V0.6.0" :
-        (topRequested ? "BAR0-TOP-INVENTORY-READ-ONLY-V0.6.0" :
-        (fbMmuRequested ? "BAR0-FB-MMU-PROFILE-READ-ONLY-V0.6.0" :
-        (mmioRequested ? "BAR0-IDENTITY-READ-ONLY-V0.6.0" :
-                         "PCI-CONFIG-READ-ONLY-COMPAT-V0.6.0"))));
+        hostPhysicalRequested ? "HOST-PHYSICAL-SEGMENT-INVENTORY-V0.7.0" :
+        (hostMemoryRequested ? "HOST-MEMORY-CPU-WRITE-READBACK-V0.7.0" :
+        (topRequested ? "BAR0-TOP-INVENTORY-READ-ONLY-V0.7.0" :
+        (fbMmuRequested ? "BAR0-FB-MMU-PROFILE-READ-ONLY-V0.7.0" :
+        (mmioRequested ? "BAR0-IDENTITY-READ-ONLY-V0.7.0" :
+                         "PCI-CONFIG-READ-ONLY-COMPAT-V0.7.0")))));
     setProperty("TuringProbeTarget", "NVIDIA TU116 10DE:2182 / ASUS 1043:8854");
     setProperty("TuringProbePCIConfigWrites", kOSBooleanFalse);
     setProperty("TuringProbeMMIOAccess", mmioCompleted ? kOSBooleanTrue : kOSBooleanFalse);
@@ -165,9 +189,15 @@ bool TuringProbe::start(IOService *provider) {
                 fbMmuRequested && mmioCompleted ?
                     kOSBooleanTrue : kOSBooleanFalse);
     setProperty("TuringProbeHostMemoryAccess",
-                hostMemoryCompleted ? kOSBooleanTrue : kOSBooleanFalse);
+                (hostMemoryCompleted || hostPhysicalCompleted) ?
+                    kOSBooleanTrue : kOSBooleanFalse);
     setProperty("TuringProbeHostMemoryCPUWrites",
-                hostMemoryCompleted ? kOSBooleanTrue : kOSBooleanFalse);
+                (hostMemoryCompleted || hostPhysicalCompleted) ?
+                    kOSBooleanTrue : kOSBooleanFalse);
+    setProperty("TuringProbeHostPhysicalSegmentAccess",
+                hostPhysicalCompleted ? kOSBooleanTrue : kOSBooleanFalse);
+    setProperty("TuringProbeHostPhysicalAddressQuery",
+                hostPhysicalCompleted ? kOSBooleanTrue : kOSBooleanFalse);
     setProperty("TuringProbeDeviceMemoryAccess", kOSBooleanFalse);
     setProperty("TuringProbeDeviceMemoryWrites", kOSBooleanFalse);
     setProperty("TuringProbeDMAAccess", kOSBooleanFalse);
@@ -181,10 +211,11 @@ bool TuringProbe::start(IOService *provider) {
            pciDevice_->getBusNumber(), pciDevice_->getDeviceNumber(),
            pciDevice_->getFunctionNumber(), identity.vendor, identity.device,
            identity.subsystemVendor, identity.subsystemDevice,
-           hostMemoryRequested ? "host-memory CPU write/readback" :
+           hostPhysicalRequested ? "host physical-segment inventory" :
+           (hostMemoryRequested ? "host-memory CPU write/readback" :
            (topRequested ? "BAR0 identity+TOP inventory" :
            (fbMmuRequested ? "BAR0 identity+FB/MMU profile" :
-           (mmioRequested ? "BAR0 identity whitelist" : "PCI only"))));
+           (mmioRequested ? "BAR0 identity whitelist" : "PCI only")))));
     return true;
 }
 

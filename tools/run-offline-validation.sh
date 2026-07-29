@@ -22,6 +22,8 @@ run python3 tools/test-address-space.py
 run python3 tools/test-transaction-plan.py
 run python3 tools/test-host-memory-model.py
 run python3 tools/test-host-memory-kext-contract.py
+run python3 tools/test-host-physical-model.py
+run python3 tools/test-host-physical-kext-contract.py
 
 run python3 -m py_compile \
   research/tu102_mmu_model.py \
@@ -29,6 +31,7 @@ run python3 -m py_compile \
   research/tu102_address_space.py \
   research/mmu_transaction_plan.py \
   research/host_memory_model.py \
+  research/host_physical_segment_model.py \
   tools/safety-audit.py \
   tools/test-decoder-contract.py \
   tools/test-mmio-contract.py \
@@ -40,7 +43,9 @@ run python3 -m py_compile \
   tools/test-address-space.py \
   tools/test-transaction-plan.py \
   tools/test-host-memory-model.py \
-  tools/test-host-memory-kext-contract.py
+  tools/test-host-memory-kext-contract.py \
+  tools/test-host-physical-model.py \
+  tools/test-host-physical-kext-contract.py
 
 if command -v plutil >/dev/null 2>&1; then
   run plutil -lint kext/TuringProbe/Info.plist
@@ -71,4 +76,5 @@ echo "- randomized MMU model and byte-image tests"
 echo "- multi-page/mixed-page address-space tests"
 echo "- transaction/rollback state-machine tests"
 echo "- bounded host-memory allocation/write/readback tests"
+echo "- one-page raw host physical-segment model and source contract"
 echo "- zero device access"

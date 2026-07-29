@@ -743,3 +743,132 @@ added. Results include:
 
 The source is now eligible for GitHub Xcode compilation and Mach-O audit only.
 It is not eligible for installation or boot yet.
+
+
+## 24. TuringProbe 0.6.0 compiled host-memory artifact
+
+**[OFFLINE ARTIFACT/MACH-O AUDIT — PASS; ONE HOST-MEMORY BOOT AUTHORISED]**
+
+- source commit `318a0b1ad3c96c9269f888ec4c52925993484abe`;
+- Xcode 16.2, SDK 15.2, x86_64;
+- Mach-O UUID `AA941AB0-EEB5-33E6-95E4-ECC01EAF1FFD`;
+- outer ZIP SHA-256 `17da09016653ce2eaf84e8e5f2e56ec42274393bc483ced619dd8cab97fe53ef`;
+- inner kext ZIP SHA-256 `db2cdf1ac21e1ad07c9671446512ed709ecf503778dac431f6a36d6140bd26ce`;
+- executable SHA-256 `1d353a031a53850c3fc6e202f7a673a7b03f9065babe1b9e99936feac13dcec2`;
+- all embedded hashes and the complete CI suite pass;
+- exactly one compiled call to `performHostMemorySelfTest`;
+- exactly one `IOMallocAligned(12288, 4096)`;
+- exactly one `IOFreeAligned(allocation, 12288)`;
+- 4096-byte prefix guard, payload and suffix guard;
+- deterministic 4096-byte CPU write/readback;
+- checksum, canary and zeroization verification compiled;
+- no physical-address query, descriptor, DMA, MMIO, PCI write or device-memory
+  path exists in the host-memory function;
+- host-memory mode rejects every BAR0/MMIO mode;
+- PCI Command and Bus Master invariants remain mandatory.
+
+A redundant PCI-only compatibility boot is skipped for this gate. One direct
+host-memory boot is authorised with exactly:
+
+`-tdprobe -tdhostmem-test`
+
+This authorisation covers ordinary host kernel RAM only. It does not authorise
+VRAM access, device-memory writes, physical-address discovery, page-table
+placement, PDB/BAR programming, TLB invalidation, DMA or commands.
+
+
+## 25. TuringProbe 0.6.0 real host-memory acceptance
+
+**[REAL-HARDWARE VERIFIED — PASS]**
+
+- exact boot mode `-tdprobe -tdhostmem-test`;
+- kext 0.6.0, UUID `AA941AB0-EEB5-33E6-95E4-ECC01EAF1FFD`;
+- 12288-byte `IOMallocAligned` allocation at 4096-byte alignment;
+- 4096-byte prefix guard, payload and suffix guard;
+- 4096 CPU-written bytes and 4096 CPU-readback bytes;
+- byte-for-byte readback passed;
+- FNV-1a-64 `0xACAC786CC2682325`;
+- correct decimal checksum `12442452279031243557`;
+- both canaries survived the write and payload zeroization;
+- payload and complete allocation zeroization passed;
+- exact allocation free completed;
+- no physical-address query, device-memory access, MMIO, PCI write, DMA,
+  firmware, interrupt, power or user-client path;
+- PCI Command remained `0x0003`;
+- Bus Master remained disabled;
+- GOP remained stable at 1920×1080 ARGB8888;
+- runtime ZIP SHA-256 `04599281a705216e321f3855f79da40795570b0077c0b275377e69781a8d5a81`.
+
+The earlier first-boot README contained only a decimal-conversion typo for the
+checksum. Its hexadecimal value, compiled constant and runtime value were all
+correct.
+
+This closes the host virtual-memory ownership milestone. Do not repeat
+`-tdhostmem-test`; restore `-tdprobe` only.
+
+### Next gate
+
+The next real primitive is a separately gated, descriptor-backed **host physical
+segment inventory**:
+
+- allocate exactly one 4096-byte wired `IOBufferMemoryDescriptor`;
+- use no system mapper and no device;
+- write/readback and zeroize through the CPU;
+- retrieve exactly one raw physical segment;
+- require nonzero, 4096-byte alignment, at least 4096 contiguous bytes and an
+  address within the TU116 47-bit physical-address width;
+- pair all descriptor ownership and cleanup paths;
+- perform no DMA, GPU mapping, page-table placement, PDB/BAR programming, TLB
+  invalidation or device write.
+
+This next mode requires source implementation, CI, Mach-O audit and separate
+authorisation before any hardware boot.
+
+
+## 26. TuringProbe 0.7.0 host physical-segment source candidate
+
+**[SOURCE IMPLEMENTED / COMPLETE LOCAL VALIDATION PASS — NOT BUILT, NO HARDWARE BOOT]**
+
+New isolated mode:
+
+```text
+-tdprobe -tdhostphys-test
+```
+
+The mode creates exactly one 4096-byte `IOBufferMemoryDescriptor` at 4096-byte
+alignment with `kIODirectionNone | kIOMemoryMapperNone`. It performs bounded CPU
+write/readback through a 3968-byte payload protected by two 64-byte canaries,
+then performs exactly one raw physical-segment query at offset zero.
+
+Fail-closed acceptance requires:
+
+- descriptor capacity and length exactly 4096;
+- kernel virtual pointer present and page aligned;
+- deterministic checksum `0xBB8BA5B0A94B2525`;
+- both canaries unchanged;
+- raw physical address nonzero and page aligned;
+- returned segment length exactly 4096;
+- complete physical range below `2^47`;
+- full page zeroization before one explicit descriptor release.
+
+The mode does not call `prepare()` or `complete()`, create `IODMACommand`, use a
+system mapper, map the page for TU116, program PTE/PDE/PDB/BAR/TLB state, touch
+VRAM or submit commands.
+
+### Local validation
+
+- safety audit: PASS;
+- legacy PCI/MMIO/PTOP/FB contracts: PASS;
+- MMU model, page-table, golden-vector, address-space and rollback suites: PASS;
+- prior host-memory suites: PASS;
+- host physical-segment model: 50,000 valid randomized segments PASS;
+- zero/misaligned/wrong-length/47-bit boundary rejection: PASS;
+- host physical kext source contract: PASS;
+- plist, Python and shell syntax: PASS;
+- zero device access during all offline tests.
+
+### Gate
+
+Build with Xcode 16.2, upload the full
+artifact, and perform a Mach-O audit. Until that audit passes, keep `-tdprobe`
+only. No `-tdhostphys-test` hardware boot is authorised.

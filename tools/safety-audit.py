@@ -13,8 +13,11 @@ FB_CPP = Path("kext/TuringProbe/FbMmuInventory.cpp")
 FB_HPP = Path("kext/TuringProbe/FbMmuInventory.hpp")
 HOST_CPP = Path("kext/TuringProbe/HostMemorySelfTest.cpp")
 HOST_HPP = Path("kext/TuringProbe/HostMemorySelfTest.hpp")
+HOST_PHYS_CPP = Path("kext/TuringProbe/HostPhysicalSegmentTest.cpp")
+HOST_PHYS_HPP = Path("kext/TuringProbe/HostPhysicalSegmentTest.hpp")
 MMIO_ALLOWED_FILES = {MMIO_CPP, MMIO_HPP, TOP_CPP, TOP_HPP, FB_CPP, FB_HPP}
 HOST_MEMORY_ALLOWED_FILES = {HOST_CPP, HOST_HPP}
+HOST_PHYSICAL_ALLOWED_FILES = {HOST_PHYS_CPP, HOST_PHYS_HPP}
 
 GLOBALLY_FORBIDDEN = {
     r"\bconfigWrite(?:8|16|32)\b": "PCI configuration write",
@@ -31,8 +34,8 @@ GLOBALLY_FORBIDDEN = {
     r"\bIODMACommand\b": "DMA command",
     r"\bIOBufferMemoryDescriptor\b": "buffer suitable for later DMA",
     r"\bIOUserClient\b": "user client surface",
-    r"\bIOCommandGate\b": "command gate not authorised in v0.6.0",
-    r"\bIOWorkLoop\b": "work loop not authorised in v0.6.0",
+    r"\bIOCommandGate\b": "command gate not authorised in v0.7.0",
+    r"\bIOWorkLoop\b": "work loop not authorised in v0.7.0",
     r"\bioWrite(?:8|16|32)\b": "I/O-space write",
     r"\bIOMappedWrite(?:8|16|32|64)\b": "mapped MMIO write",
     r"\bOSWrite(?:Little|Big)Int(?:8|16|32|64)\b": "memory write primitive",
@@ -73,6 +76,8 @@ for base in SOURCE_DIRS:
         texts[rel] = text
 
         for pattern, reason in GLOBALLY_FORBIDDEN.items():
+            if pattern == r"\bIOBufferMemoryDescriptor\b" and rel in HOST_PHYSICAL_ALLOWED_FILES:
+                continue
             for match in re.finditer(pattern, text):
                 line = text.count("\n", 0, match.start()) + 1
                 errors.append(f"{rel}:{line}: {reason}: {match.group(0)}")
@@ -190,6 +195,49 @@ else:
         if token not in host:
             errors.append(f"{HOST_CPP}: missing host-memory contract token {token}")
 
+
+host_phys = texts.get(HOST_PHYS_CPP, "")
+if not host_phys:
+    errors.append(f"{HOST_PHYS_CPP}: missing host physical-segment module")
+else:
+    if len(re.findall(r"\bIOBufferMemoryDescriptor::withOptions\s*\(", host_phys)) != 1:
+        errors.append(f"{HOST_PHYS_CPP}: exactly one descriptor allocation is required")
+    if len(re.findall(r"\bgetBytesNoCopy\s*\(", host_phys)) != 1:
+        errors.append(f"{HOST_PHYS_CPP}: exactly one bounded virtual pointer query is required")
+    if len(re.findall(r"\bgetPhysicalSegment\s*\(", host_phys)) != 1:
+        errors.append(f"{HOST_PHYS_CPP}: exactly one raw physical-segment query is required")
+    if len(re.findall(r"\bdescriptor->release\s*\(\s*\)\s*;", host_phys)) != 1:
+        errors.append(f"{HOST_PHYS_CPP}: exactly one explicit descriptor release is required")
+    if "descriptor = nullptr;" not in host_phys:
+        errors.append(f"{HOST_PHYS_CPP}: descriptor pointer must clear after release")
+    if "IOBufferMemoryDescriptor *descriptor" not in host_phys:
+        errors.append(f"{HOST_PHYS_CPP}: descriptor ownership must be explicit raw-pointer ownership")
+    if "auto descriptor" in host_phys or "OSPtr<IOBufferMemoryDescriptor>" in host_phys:
+        errors.append(f"{HOST_PHYS_CPP}: implicit descriptor ownership is forbidden")
+    for token in (
+        "IODMACommand", "IOMemoryMap *", "#include <IOKit/IOMemoryMap.h>", "IOMapper::", "prepare(", "complete(",
+        "createMappingInTask", "IOMappedWrite", "OSWriteLittleInt",
+        "configWrite", "setBusMasterEnable", "kIOMemoryPhysicallyContiguous",
+        "inTaskWithPhysicalMask", "dmaCommandOperation",
+    ):
+        if token in host_phys:
+            errors.append(f"{HOST_PHYS_CPP}: forbidden host-physical token: {token}")
+    required_host_phys_tokens = (
+        "kIODirectionNone | kIOMemoryMapperNone",
+        "kDescriptorCapacity = 4096U",
+        "kDescriptorAlignment = 4096U",
+        "kHostPhysicalAddressBits = 47U",
+        "kExpectedPayloadChecksum = 0xBB8BA5B0A94B2525ULL",
+        "physicalSegmentLength == kDescriptorCapacity",
+        "TPHostPhysicalAddressWithin47Bits",
+        "TPHostPhysicalEntireDescriptorZeroBeforeRelease",
+        "TPHostPhysicalDescriptorReleased",
+        "TURINGPROBE_ENABLE_HOST_PHYSICAL_TEST",
+    )
+    for token in required_host_phys_tokens:
+        if token not in host_phys:
+            errors.append(f"{HOST_PHYS_CPP}: missing host-physical contract token {token}")
+
 registers = texts.get(Path("include/TuringRegisters.hpp"), "")
 expected_constants = {
     "kNvPmcBoot0Offset": 0x000000,
@@ -242,12 +290,12 @@ if "FbMmuInventory.cpp" not in pbx or "FbMmuInventory.hpp" not in pbx:
     errors.append("project.pbxproj: FB/MMU inventory module is not included")
 if "HostMemorySelfTest.cpp" not in pbx or "HostMemorySelfTest.hpp" not in pbx:
     errors.append("project.pbxproj: host-memory self-test module is not included")
-if pbx.count("MODULE_VERSION = 0.6.0") != 2:
-    errors.append("project.pbxproj: module version must be 0.6.0 in both configurations")
+if pbx.count("MODULE_VERSION = 0.7.0") != 2:
+    errors.append("project.pbxproj: module version must be 0.7.0 in both configurations")
 
 build_sh = (ROOT / "tools/build.sh").read_text(encoding="utf-8")
-if 'turingprobe_version=0.6.0' not in build_sh:
-    errors.append("tools/build.sh: manifest version must be 0.6.0")
+if 'turingprobe_version=0.7.0' not in build_sh:
+    errors.append("tools/build.sh: manifest version must be 0.7.0")
 if 'mmio_fb_inventory=1x32@0x100ce0' not in build_sh:
     errors.append("tools/build.sh: FB inventory manifest entry missing")
 if 'fb_compile_gate=TURINGPROBE_ENABLE_FB_READ=1' not in build_sh:
@@ -268,6 +316,7 @@ RESEARCH_REQUIRED = {
     Path("research/mmu_transaction_plan.py"),
     Path("research/mmu-golden-vectors.json"),
     Path("research/host_memory_model.py"),
+    Path("research/host_physical_segment_model.py"),
 }
 RESEARCH_FORBIDDEN_TOKENS = (
     "IOMemoryMap", "IOPCIDevice", "OSReadLittleInt32", "OSWriteLittleInt32",
@@ -289,6 +338,12 @@ if 'bootArgumentPresent("-tdhostmem-test")' not in main:
     errors.append("TuringProbe.cpp: isolated -tdhostmem-test gate missing")
 if "hostMemoryRequested && mmioRequested" not in main:
     errors.append("TuringProbe.cpp: host-memory mode must reject all MMIO modes")
+if 'bootArgumentPresent("-tdhostphys-test")' not in main:
+    errors.append("TuringProbe.cpp: isolated -tdhostphys-test gate missing")
+if "hostPhysicalRequested && mmioRequested" not in main:
+    errors.append("TuringProbe.cpp: host-physical mode must reject all MMIO modes")
+if "hostMemoryRequested && hostPhysicalRequested" not in main:
+    errors.append("TuringProbe.cpp: host-memory modes must remain mutually exclusive")
 if 'bootArgumentPresent("-tdmmu-read")' in main or "-tdmmu-read" in main:
     errors.append("TuringProbe.cpp: no MMU hardware boot argument is authorised")
 
@@ -310,6 +365,8 @@ required_workflow_tokens = (
     "tools/test-transaction-plan.py",
     "tools/test-host-memory-model.py",
     "tools/test-host-memory-kext-contract.py",
+    "tools/test-host-physical-model.py",
+    "tools/test-host-physical-kext-contract.py",
 )
 validation_script = (ROOT / "tools/run-offline-validation.sh").read_text(encoding="utf-8")
 for token in required_workflow_tokens:
@@ -334,4 +391,4 @@ if errors:
     print("\n".join(errors), file=sys.stderr)
     raise SystemExit(1)
 
-print("SAFETY AUDIT PASSED: v0.6.0 adds isolated aligned host-memory CPU write/readback; no device-memory access")
+print("SAFETY AUDIT PASSED: v0.7.0 adds one raw host physical-segment query; no DMA, mapper or device-memory access")

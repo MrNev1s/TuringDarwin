@@ -1,0 +1,111 @@
+TuringProbe v0.6.0 HOST-MEMORY REAL-HARDWARE ACCEPTANCE REPORT
+Date: 2026-07-29
+
+RESULT: PASS
+
+SYSTEM
+- macOS 15.7.7
+- build 24G720
+- Darwin 24.6.0 x86_64
+- TuringProbe 0.6.0
+- Mach-O UUID: AA941AB0-EEB5-33E6-95E4-ECC01EAF1FFD
+- service registered, matched, active, busy 0
+
+BOOT POLICY
+- exact mode: -tdprobe -tdhostmem-test
+- -tdmmio-read absent
+- -tdtop-read absent
+- -tdfb-read absent
+- -tdunsafe absent
+- -tdoff absent
+
+HOST-MEMORY OPERATION
+- allocator: IOMallocAligned / IOFreeAligned
+- allocation size: 12288 bytes
+- alignment: 4096 bytes
+- prefix guard: 4096 bytes
+- payload: 4096 bytes
+- suffix guard: 4096 bytes
+- allocation succeeded: Yes
+- alignment valid: Yes
+- initial zero state verified: Yes
+- payload bytes written by CPU: 4096
+- payload bytes read back by CPU: 4096
+- byte-for-byte readback matched: Yes
+
+CHECKSUM
+- expected FNV-1a-64: 0xACAC786CC2682325
+- expected decimal: 12442452279031243557
+- observed FNV-1a-64: 0xACAC786CC2682325
+- observed decimal: 12442452279031243557
+- checksum matched: Yes
+
+GUARDS AND CLEANUP
+- prefix canary valid after write: Yes
+- suffix canary valid after write: Yes
+- payload zeroized: Yes
+- prefix canary valid after payload zeroization: Yes
+- suffix canary valid after payload zeroization: Yes
+- entire 12288-byte allocation zero before free: Yes
+- allocation freed: Yes
+- self-test completed: Yes
+- failure reason: absent
+
+DEVICE SAFETY
+- host CPU writes: Yes
+- device-memory access: No
+- device-memory writes: No
+- physical address queried: No
+- descriptor marked device-accessible: No
+- BAR0/MMIO access: No
+- MMIO writes: No
+- PCI configuration writes: No
+- DMA: No
+- interrupt access: No
+- firmware access: No
+- power-state changes: No
+- user client: No
+- PTOP access: No
+- FB/MMU inventory access: No
+
+PCI INVARIANTS
+- PCI Command before probe: 0x0003
+- PCI Command after probe: 0x0003
+- PCI Command unchanged: Yes
+- Bus Master before probe: No
+- Bus Master after probe: No
+
+DISPLAY
+- generic GOP/IONDRV framebuffer remained active
+- 1920x1080 ARGB8888
+- main display: Yes
+- online: Yes
+- no evidence in supplied successful-boot logs of panic, hang or corruption
+
+KERNEL LOG
+- kernelmanagerd received the kext load notification
+- the recurring kernelmanager_helper identifier-resolution warning remains
+  non-blocking; kmutil and IORegistry independently confirm successful load
+
+LOG ZIP SHA-256
+04599281a705216e321f3855f79da40795570b0077c0b275377e69781a8d5a81
+
+NOTE ABOUT THE FIRST-BOOT README
+The hexadecimal expected checksum in the package was correct:
+0xACAC786CC2682325.
+
+One decimal line in the README used an incorrect conversion. The correct
+decimal value is 12442452279031243557, which exactly matches the runtime result.
+This documentation typo did not affect code, validation or the hardware test.
+
+CONCLUSION
+TuringProbe 0.6.0 passes the isolated host-memory CPU write/readback milestone.
+
+This proves that the kext can safely allocate, write, verify, guard, zeroize and
+free ordinary wired host kernel memory.
+
+It does not prove physical-address discovery, GPU visibility, DMA, VRAM access,
+live page-table placement, PDB programming, TLB invalidation or command
+submission.
+
+Restore -tdprobe-only mode. Do not repeat -tdhostmem-test.

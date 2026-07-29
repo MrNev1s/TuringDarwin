@@ -1,0 +1,11 @@
+TuringProbe v0.7.0 GitHub build
+
+1. Apply TuringDarwin-v0.7.0-HOST-PHYSICAL-UPDATE-ONLY.zip at repository root.
+2. Commit all files, including .github, research and tools.
+3. Run Actions -> Build TuringProbe kext -> Debug.
+4. Download the complete artifact named:
+   TuringProbe-v0.7.0-Debug-x86_64
+5. Upload the complete artifact ZIP for Mach-O audit.
+
+Do not install the kext and do not use -tdhostphys-test before artifact audit.
+The machine must remain on -tdprobe only.

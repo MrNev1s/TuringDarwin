@@ -1,0 +1,124 @@
+
+===== python3 tools/safety-audit.py =====
+SAFETY AUDIT PASSED: v0.7.0 adds one raw host physical-segment query; no DMA, mapper or device-memory access
+
+===== python3 tools/test-decoder-contract.py =====
+decoder contract passed: TU116 ReBAR entry0 = BAR0, 16 MiB, 3 entries
+
+===== python3 tools/test-mmio-contract.py =====
+MMIO CONTRACT PASSED: read-only map, explicit release, identity gate, optional TOP or one-register FB inventory
+
+===== python3 tools/test-top-contract.py =====
+TOP CONTRACT PASSED: fixed 64-dword table, bounded parser, Nouveau bitfields verified
+
+===== python3 tools/test-fb-mmu-contract.py =====
+FB/MMU CONTRACT PASSED: one 0x100CE0 read, 6 GiB decoder, corrected source-only MMU profile
+
+===== python3 tools/test-mmu-model.py =====
+MMU MODEL CONTRACT PASSED
+- 4 KiB, 64 KiB and 2 MiB hierarchies: 49-bit VA
+- 60000 VA round-trip vectors
+- 60000 PTE/PDE randomized vectors
+- logical-kind fallback and compression rejection
+- fail-closed alignment/range/kind checks
+- zero MMIO and zero device access
+
+===== python3 tools/test-page-table-image.py =====
+PAGE-TABLE IMAGE CONTRACT PASSED
+- 30000 complete synthetic build/walk round trips
+- 4 KiB, 64 KiB and 2 MiB paths
+- verified low=LPT/high=SPT PD0 half ordering
+- verified direct 2 MiB PTE in low PD0 half
+- missing/corrupt/wrong-page-size cases fail closed
+- zero device access
+
+===== python3 tools/test-golden-vectors.py =====
+MMU GOLDEN VECTOR CONTRACT PASSED
+- 3 fixed VA vectors
+- 4 fixed PTE vectors
+- 2 fixed PDE vectors
+- 1 fixed instance/PDB vectors
+- zero MMIO and zero device access
+
+===== python3 tools/test-address-space.py =====
+MMU ADDRESS-SPACE CONTRACT PASSED
+- 12025 sampled translations
+- multi-page 4 KiB, 64 KiB and 2 MiB mappings
+- leaf, PD0 and root-index boundary crossings
+- mixed 4 KiB/64 KiB PD0 halves
+- explicit alias policy and overlap rejection
+- 4 KiB <-> 2 MiB promotion/demotion round-trip
+- corruption and incomplete unmap paths fail closed
+- zero MMIO and zero device access
+
+===== python3 tools/test-transaction-plan.py =====
+MMU TRANSACTION/ROLLBACK CONTRACT PASSED
+- complete ordered state machine
+- all offline failure points restore safe baseline
+- first device-memory write remains blocked
+- every hardware step has a timeout and inverse obligation
+- hardware eligibility remains false
+- zero MMIO and zero device access
+
+===== python3 tools/test-host-memory-model.py =====
+HOST MEMORY MODEL CONTRACT PASSED
+- exact 3-page / 12288-byte layout
+- 4096-byte payload and 4096-byte canaries
+- 50000 randomized bounded writes
+- one-byte underflow/overflow rejection
+- deterministic FNV-1a readback checksum
+- verified payload and full-allocation zeroization
+- zero device access
+
+===== python3 tools/test-host-memory-kext-contract.py =====
+HOST MEMORY KEXT CONTRACT PASSED
+- one aligned wired host allocation and one matching free
+- 4096-byte prefix/payload/suffix layout
+- deterministic CPU write/readback, canaries and zeroization
+- no physical-address query, descriptor, DMA or device-memory path
+- isolated -tdhostmem-test boot mode
+
+===== python3 tools/test-host-physical-model.py =====
+HOST PHYSICAL SEGMENT MODEL CONTRACT PASSED
+- exact one-page / 4096-byte descriptor
+- 64-byte guards and 3968-byte CPU payload
+- deterministic checksum 0xBB8BA5B0A94B2525
+- 50000 valid randomized raw physical segments
+- zero/misaligned/wrong-length/47-bit overflow rejection
+- zeroization required before release
+- zero device access
+
+===== python3 tools/test-host-physical-kext-contract.py =====
+HOST PHYSICAL SEGMENT KEXT CONTRACT PASSED
+- one descriptor, one raw segment query and one explicit release
+- one 4096-byte wired kernel page with mapper disabled
+- bounded CPU write/readback, canaries and zeroization
+- exact 4096-byte segment, page alignment and 47-bit checks
+- no prepare/complete, DMA, mapper, GPU or device-memory path
+- isolated -tdhostphys-test boot mode
+
+===== python3 -m py_compile research/tu102_mmu_model.py research/tu102_page_table_image.py research/tu102_address_space.py research/mmu_transaction_plan.py research/host_memory_model.py research/host_physical_segment_model.py tools/safety-audit.py tools/test-decoder-contract.py tools/test-mmio-contract.py tools/test-top-contract.py tools/test-fb-mmu-contract.py tools/test-mmu-model.py tools/test-page-table-image.py tools/test-golden-vectors.py tools/test-address-space.py tools/test-transaction-plan.py tools/test-host-memory-model.py tools/test-host-memory-kext-contract.py tools/test-host-physical-model.py tools/test-host-physical-kext-contract.py =====
+
+===== plutil -lint kext/TuringProbe/Info.plist =====
+kext/TuringProbe/Info.plist: OK
+
+===== plutil -lint docs/OPENCORE-ENTRY.plist =====
+docs/OPENCORE-ENTRY.plist: OK
+
+===== bash -n tools/build.sh =====
+
+===== bash -n tools/bootstrap-sdk.sh =====
+
+===== bash -n tools/collect-macos.sh =====
+
+===== bash -n tools/run-offline-validation.sh =====
+
+OFFLINE VALIDATION SUITE PASSED
+- all legacy PCI/MMIO/PTOP/FB contracts
+- MMU golden vectors
+- randomized MMU model and byte-image tests
+- multi-page/mixed-page address-space tests
+- transaction/rollback state-machine tests
+- bounded host-memory allocation/write/readback tests
+- one-page raw host physical-segment model and source contract
+- zero device access

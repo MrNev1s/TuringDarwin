@@ -39,7 +39,7 @@ assert "TuringProbeDeviceMemoryWrites" in main
 assert pbx.count("TURINGPROBE_ENABLE_HOST_MEMORY_TEST=1") == 2
 assert "HostMemorySelfTest.cpp" in pbx
 assert "HostMemorySelfTest.hpp" in pbx
-assert pbx.count("MODULE_VERSION = 0.6.0") == 2
+assert pbx.count("MODULE_VERSION = 0.7.0") == 2
 assert "host_memory_compile_gate=TURINGPROBE_ENABLE_HOST_MEMORY_TEST=1" in build
 assert "host_memory_test=3x4096" in build
 assert "device_memory_write_whitelist=EMPTY" in build
