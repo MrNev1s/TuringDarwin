@@ -67,10 +67,10 @@ DEFAULT_STEPS: tuple[TransactionStep, ...] = (
         device_access=False,
         device_write=False,
         timeout_ms=None,
-        required_evidence=("bounded CPU allocator",),
+        required_evidence=("bounded CPU allocator", "canaries", "zeroization"),
         inverse_name="release-host-model",
         inverse_status=EvidenceStatus.PROVEN_OFFLINE,
-        notes="Ordinary CPU memory only.",
+        notes="Ordinary CPU memory only; v0.6.0 host self-test is the runtime candidate.",
     ),
     TransactionStep(
         name="build-page-tables",

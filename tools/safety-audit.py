@@ -11,7 +11,10 @@ TOP_CPP = Path("kext/TuringProbe/TopInventory.cpp")
 TOP_HPP = Path("kext/TuringProbe/TopInventory.hpp")
 FB_CPP = Path("kext/TuringProbe/FbMmuInventory.cpp")
 FB_HPP = Path("kext/TuringProbe/FbMmuInventory.hpp")
+HOST_CPP = Path("kext/TuringProbe/HostMemorySelfTest.cpp")
+HOST_HPP = Path("kext/TuringProbe/HostMemorySelfTest.hpp")
 MMIO_ALLOWED_FILES = {MMIO_CPP, MMIO_HPP, TOP_CPP, TOP_HPP, FB_CPP, FB_HPP}
+HOST_MEMORY_ALLOWED_FILES = {HOST_CPP, HOST_HPP}
 
 GLOBALLY_FORBIDDEN = {
     r"\bconfigWrite(?:8|16|32)\b": "PCI configuration write",
@@ -28,8 +31,8 @@ GLOBALLY_FORBIDDEN = {
     r"\bIODMACommand\b": "DMA command",
     r"\bIOBufferMemoryDescriptor\b": "buffer suitable for later DMA",
     r"\bIOUserClient\b": "user client surface",
-    r"\bIOCommandGate\b": "command gate not authorised in v0.5.1",
-    r"\bIOWorkLoop\b": "work loop not authorised in v0.5.1",
+    r"\bIOCommandGate\b": "command gate not authorised in v0.6.0",
+    r"\bIOWorkLoop\b": "work loop not authorised in v0.6.0",
     r"\bioWrite(?:8|16|32)\b": "I/O-space write",
     r"\bIOMappedWrite(?:8|16|32|64)\b": "mapped MMIO write",
     r"\bOSWrite(?:Little|Big)Int(?:8|16|32|64)\b": "memory write primitive",
@@ -156,6 +159,37 @@ else:
     if 'TPFBInventoryCompileGateEnabled' not in fb:
         errors.append(f"{FB_CPP}: compile-gate telemetry missing")
 
+
+host = texts.get(HOST_CPP, "")
+if not host:
+    errors.append(f"{HOST_CPP}: missing bounded host-memory self-test module")
+else:
+    if len(re.findall(r"\bIOMallocAligned\s*\(", host)) != 1:
+        errors.append(f"{HOST_CPP}: exactly one IOMallocAligned call is required")
+    if len(re.findall(r"\bIOFreeAligned\s*\(", host)) != 1:
+        errors.append(f"{HOST_CPP}: exactly one matching IOFreeAligned call is required")
+    for token in (
+        "IOBufferMemoryDescriptor", "IOMemoryDescriptor", "IODMACommand",
+        "IOMallocContiguous", "getPhysicalSegment", "getPhysicalAddress",
+        "prepare(", "complete(", "IOMappedWrite", "OSWriteLittleInt",
+        "configWrite", "setBusMasterEnable",
+    ):
+        if token in host:
+            errors.append(f"{HOST_CPP}: forbidden host-memory token: {token}")
+    required_host_tokens = (
+        "kHostMemoryAllocationSize", "kHostMemoryAlignment",
+        "kExpectedPayloadChecksum", "TPHostMemoryPayloadReadbackMatched",
+        "TPHostMemoryPrefixCanaryValidAfterWrite",
+        "TPHostMemorySuffixCanaryValidAfterWrite",
+        "TPHostMemoryPayloadZeroized",
+        "TPHostMemoryEntireAllocationZeroBeforeFree",
+        "TPHostMemoryAllocationFreed",
+        "TURINGPROBE_ENABLE_HOST_MEMORY_TEST",
+    )
+    for token in required_host_tokens:
+        if token not in host:
+            errors.append(f"{HOST_CPP}: missing host-memory contract token {token}")
+
 registers = texts.get(Path("include/TuringRegisters.hpp"), "")
 expected_constants = {
     "kNvPmcBoot0Offset": 0x000000,
@@ -200,20 +234,28 @@ if pbx.count("TURINGPROBE_ENABLE_MMIO_READ=1") != 2:
     errors.append("project.pbxproj: Debug and Release must enable compile-time MMIO gate")
 if pbx.count("TURINGPROBE_ENABLE_FB_READ=1") != 2:
     errors.append("project.pbxproj: Debug and Release must enable dedicated FB read gate")
+if pbx.count("TURINGPROBE_ENABLE_HOST_MEMORY_TEST=1") != 2:
+    errors.append("project.pbxproj: Debug and Release must enable host-memory test gate")
 if "TopInventory.cpp" not in pbx or "TopInventory.hpp" not in pbx:
     errors.append("project.pbxproj: TOP inventory module is not included")
 if "FbMmuInventory.cpp" not in pbx or "FbMmuInventory.hpp" not in pbx:
     errors.append("project.pbxproj: FB/MMU inventory module is not included")
-if pbx.count("MODULE_VERSION = 0.5.1") != 2:
-    errors.append("project.pbxproj: module version must be 0.5.1 in both configurations")
+if "HostMemorySelfTest.cpp" not in pbx or "HostMemorySelfTest.hpp" not in pbx:
+    errors.append("project.pbxproj: host-memory self-test module is not included")
+if pbx.count("MODULE_VERSION = 0.6.0") != 2:
+    errors.append("project.pbxproj: module version must be 0.6.0 in both configurations")
 
 build_sh = (ROOT / "tools/build.sh").read_text(encoding="utf-8")
-if 'turingprobe_version=0.5.1' not in build_sh:
-    errors.append("tools/build.sh: manifest version must be 0.5.1")
+if 'turingprobe_version=0.6.0' not in build_sh:
+    errors.append("tools/build.sh: manifest version must be 0.6.0")
 if 'mmio_fb_inventory=1x32@0x100ce0' not in build_sh:
     errors.append("tools/build.sh: FB inventory manifest entry missing")
 if 'fb_compile_gate=TURINGPROBE_ENABLE_FB_READ=1' not in build_sh:
     errors.append("tools/build.sh: dedicated FB compile gate manifest entry missing")
+if 'host_memory_compile_gate=TURINGPROBE_ENABLE_HOST_MEMORY_TEST=1' not in build_sh:
+    errors.append("tools/build.sh: host-memory compile gate manifest entry missing")
+if 'device_memory_write_whitelist=EMPTY' not in build_sh:
+    errors.append("tools/build.sh: device-memory write whitelist must remain empty")
 
 
 # Offline MMU research code must remain physically incapable of touching IOKit
@@ -225,6 +267,7 @@ RESEARCH_REQUIRED = {
     Path("research/tu102_address_space.py"),
     Path("research/mmu_transaction_plan.py"),
     Path("research/mmu-golden-vectors.json"),
+    Path("research/host_memory_model.py"),
 }
 RESEARCH_FORBIDDEN_TOKENS = (
     "IOMemoryMap", "IOPCIDevice", "OSReadLittleInt32", "OSWriteLittleInt32",
@@ -242,6 +285,10 @@ for rel in sorted(RESEARCH_REQUIRED):
             if token in text:
                 errors.append(f"{rel}: forbidden device/network token in offline model: {token}")
 
+if 'bootArgumentPresent("-tdhostmem-test")' not in main:
+    errors.append("TuringProbe.cpp: isolated -tdhostmem-test gate missing")
+if "hostMemoryRequested && mmioRequested" not in main:
+    errors.append("TuringProbe.cpp: host-memory mode must reject all MMIO modes")
 if 'bootArgumentPresent("-tdmmu-read")' in main or "-tdmmu-read" in main:
     errors.append("TuringProbe.cpp: no MMU hardware boot argument is authorised")
 
@@ -261,6 +308,8 @@ required_workflow_tokens = (
     "tools/test-golden-vectors.py",
     "tools/test-address-space.py",
     "tools/test-transaction-plan.py",
+    "tools/test-host-memory-model.py",
+    "tools/test-host-memory-kext-contract.py",
 )
 validation_script = (ROOT / "tools/run-offline-validation.sh").read_text(encoding="utf-8")
 for token in required_workflow_tokens:
@@ -285,4 +334,4 @@ if errors:
     print("\n".join(errors), file=sys.stderr)
     raise SystemExit(1)
 
-print("SAFETY AUDIT PASSED: v0.5.1 adds offline MMU modelling and no new hardware access")
+print("SAFETY AUDIT PASSED: v0.6.0 adds isolated aligned host-memory CPU write/readback; no device-memory access")

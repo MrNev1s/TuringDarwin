@@ -1,0 +1,16 @@
+TuringProbe v0.6.0 GitHub build
+
+1. Extract TuringDarwin-v0.6.0-HOST-MEMORY-UPDATE-ONLY.zip.
+2. Upload the complete contents to the repository root, including .github.
+3. Commit: TuringProbe 0.6.0 isolated host memory self test
+4. Actions -> Build TuringProbe kext -> Run workflow -> Debug.
+5. Download the complete artifact named:
+   TuringProbe-v0.6.0-Debug-x86_64
+6. Upload the complete artifact for binary audit.
+
+DO NOT install or boot v0.6.0 before compiled Mach-O audit.
+Keep the currently verified EFI on -tdprobe only.
+
+The expected new compiled symbols are limited to HostMemorySelfTest and the
+IOMallocAligned/IOFreeAligned imports. No physical-address, descriptor, DMA,
+MMIO write or device-memory path is authorised.

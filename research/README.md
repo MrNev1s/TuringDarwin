@@ -20,3 +20,9 @@ or perform MMIO.
 
 No third-party source code is vendored. Only derived constants, test vectors,
 and source references are stored here.
+
+
+## Host-memory staging 0.6.0
+
+`host_memory_model.py` mirrors the bounded 3-page CPU-only self-test. It has no
+OS, device, mapping, subprocess or network access.

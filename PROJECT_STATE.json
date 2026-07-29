@@ -1,9 +1,9 @@
 {
-  "schema_version": 18,
+  "schema_version": 21,
   "updated": "2026-07-29",
   "repository": "MrNev1s/TuringDarwin",
   "verified_runtime_version": "0.4.0-fb-capacity-read-only",
-  "development_version": "0.5.1",
+  "development_version": "0.6.0",
   "target": {
     "bdf": "01:00.0",
     "vendor_id": "10DE",
@@ -233,10 +233,10 @@
       "user_client": false
     }
   },
-  "next_gate": "GitHub Actions build and Mach-O audit only; do not install or boot. Then design isolated memory allocation/write/readback offline.",
-  "current_stage": "TuringProbe 0.5.1 complete offline MMU validation and rollback design passed locally; no new hardware path",
-  "candidate_version": "0.5.1",
-  "candidate_status": "source-implemented-complete-offline-validation-pass-not-built",
+  "next_gate": "GitHub Xcode build and Mach-O audit; no boot before audit",
+  "current_stage": "TuringProbe 0.6.0 host-memory self-test passed complete local source validation",
+  "candidate_version": "0.6.0",
+  "candidate_status": "source-local-validation-pass-awaiting-build-audit",
   "candidate_mmio": {
     "bar": 0,
     "mapping": "kIOMapReadOnly, explicit IOMemoryMap pointer, mandatory release and nullptr clear",
@@ -620,5 +620,43 @@
     ],
     "ci_gap_from_0_5_0_resolved": true,
     "unsupported_kextutil_check_removed": true
+  },
+  "host_memory_candidate": {
+    "schema_version": 1,
+    "version": "0.6.0",
+    "date": "2026-07-29",
+    "status": "source-local-validation-pass",
+    "mode": "-tdprobe -tdhostmem-test",
+    "allocation": {
+      "allocator": "IOMallocAligned",
+      "free": "IOFreeAligned",
+      "alignment_bytes": 4096,
+      "prefix_canary_bytes": 4096,
+      "payload_bytes": 4096,
+      "suffix_canary_bytes": 4096,
+      "total_bytes": 12288
+    },
+    "payload": {
+      "formula": "(index * 131 + 0x5D) & 0xFF",
+      "checksum": "FNV-1a-64",
+      "expected": "0xACAC786CC2682325"
+    },
+    "device_access": {
+      "mmio_reads": 0,
+      "mmio_writes": 0,
+      "physical_address_queries": 0,
+      "memory_descriptors": 0,
+      "dma": 0,
+      "vram_writes": 0,
+      "device_memory_write_whitelist": []
+    },
+    "hardware_authorized": false,
+    "validation": {
+      "legacy_contracts": "pass",
+      "host_memory_model": "pass",
+      "host_memory_kext_contract": "pass",
+      "randomized_bounded_writes": 50000,
+      "device_access": 0
+    }
   }
 }

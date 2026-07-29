@@ -669,3 +669,77 @@ After artifact audit, continue research on the first missing primitive: a
 bounded, isolated memory-allocation and CPU write/readback design. No actual
 VRAM allocation or write is authorised.
 
+
+
+## 23. TuringProbe 0.6.0 isolated host-memory runtime candidate
+
+**[SOURCE IMPLEMENTED AND LOCALLY VALIDATED; NOT BUILT OR BOOTED]**
+
+This is the first new runtime primitive after the MMU modelling phase.
+
+New isolated mode:
+
+```text
+-tdprobe -tdhostmem-test
+```
+
+The mode is mutually exclusive with `-tdmmio-read`, so no BAR0 inventory runs
+in the same boot.
+
+Exact operation:
+
+- one `IOMallocAligned` allocation;
+- 4096-byte alignment;
+- 4096-byte prefix canary;
+- 4096-byte payload;
+- 4096-byte suffix canary;
+- deterministic CPU write/readback of all 4096 payload bytes;
+- expected FNV-1a-64 checksum `0xACAC786CC2682325`;
+- canary verification after write and after payload zeroization;
+- verified zeroization of payload and complete 12288-byte allocation;
+- one matching `IOFreeAligned` call;
+- local pointers cleared after free.
+
+Explicitly absent:
+
+- physical-address query;
+- memory descriptor or DMA command;
+- GPU-visible mapping;
+- MMIO/PCI write;
+- VRAM access;
+- page-table placement;
+- PDB/BAR/TLB programming;
+- firmware or command submission.
+
+`device_memory_write_whitelist=EMPTY` remains mandatory.
+
+### Next gate
+
+Run the complete local source suite, then build 0.6.0 in GitHub Actions and
+audit the compiled allocation/free calls, boot gating and absence of device
+access. Only after binary audit may one host-memory-only boot be considered.
+
+
+## 24. TuringProbe 0.6.0 local source gate
+
+**[PASS]**
+
+The complete validation suite passed after the host-memory implementation was
+added. Results include:
+
+- all prior PCI/MMIO/PTOP/FB contracts;
+- 60,000 MMU VA and 60,000 randomized PTE/PDE vectors;
+- 30,000 byte-exact page-table build/walk vectors;
+- 12,025 multi-page translations;
+- full transaction/rollback tests;
+- exact 3-page host-memory model;
+- 50,000 randomized bounded host writes;
+- underflow/overflow rejection;
+- canary-corruption detection;
+- deterministic FNV-1a readback;
+- payload and full-allocation zeroization;
+- source contract proving no physical-address, descriptor, DMA, GPU mapping,
+  MMIO write or device-memory path.
+
+The source is now eligible for GitHub Xcode compilation and Mach-O audit only.
+It is not eligible for installation or boot yet.

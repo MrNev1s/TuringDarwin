@@ -154,7 +154,7 @@ bool performReadOnlyBar0Probe(IOPCIDevice *device, IOService *owner,
             if (boot1 == 0xFFFFFFFFU) {
                 mappingFailure = "NV_PMC_BOOT_1 returned all ones";
             } else if (boot1 == kBoot1BigEndianValue) {
-                mappingFailure = "GPU reports big-endian MMIO; v0.5.1 will not switch it";
+                mappingFailure = "GPU reports big-endian MMIO; v0.6.0 will not switch it";
             } else if (vgpuBits != 0U) {
                 mappingFailure = "NV_PMC_BOOT_1 reports a vGPU mode";
             } else if (boot0 == 0U || boot0 == 0xFFFFFFFFU) {

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "version": "0.6.0",
+  "date": "2026-07-29",
+  "status": "source-local-validation-pass-awaiting-build-audit",
+  "mode": "-tdprobe -tdhostmem-test",
+  "allocation": {
+    "allocator": "IOMallocAligned",
+    "free": "IOFreeAligned",
+    "alignment_bytes": 4096,
+    "prefix_canary_bytes": 4096,
+    "payload_bytes": 4096,
+    "suffix_canary_bytes": 4096,
+    "total_bytes": 12288
+  },
+  "payload": {
+    "formula": "(index * 131 + 0x5D) & 0xFF",
+    "checksum": "FNV-1a-64",
+    "expected": "0xACAC786CC2682325"
+  },
+  "device_access": {
+    "mmio_reads": 0,
+    "mmio_writes": 0,
+    "physical_address_queries": 0,
+    "memory_descriptors": 0,
+    "dma": 0,
+    "vram_writes": 0,
+    "device_memory_write_whitelist": []
+  },
+  "hardware_authorized": false,
+  "local_validation": {
+    "result": "pass",
+    "randomized_bounded_writes": 50000,
+    "overflow_underflow_rejection": true,
+    "canary_corruption_detection": true,
+    "zeroization_verification": true,
+    "device_access": 0
+  }
+}

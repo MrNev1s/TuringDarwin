@@ -20,12 +20,15 @@ run python3 tools/test-page-table-image.py
 run python3 tools/test-golden-vectors.py
 run python3 tools/test-address-space.py
 run python3 tools/test-transaction-plan.py
+run python3 tools/test-host-memory-model.py
+run python3 tools/test-host-memory-kext-contract.py
 
 run python3 -m py_compile \
   research/tu102_mmu_model.py \
   research/tu102_page_table_image.py \
   research/tu102_address_space.py \
   research/mmu_transaction_plan.py \
+  research/host_memory_model.py \
   tools/safety-audit.py \
   tools/test-decoder-contract.py \
   tools/test-mmio-contract.py \
@@ -35,7 +38,9 @@ run python3 -m py_compile \
   tools/test-page-table-image.py \
   tools/test-golden-vectors.py \
   tools/test-address-space.py \
-  tools/test-transaction-plan.py
+  tools/test-transaction-plan.py \
+  tools/test-host-memory-model.py \
+  tools/test-host-memory-kext-contract.py
 
 if command -v plutil >/dev/null 2>&1; then
   run plutil -lint kext/TuringProbe/Info.plist
@@ -65,4 +70,5 @@ echo "- MMU golden vectors"
 echo "- randomized MMU model and byte-image tests"
 echo "- multi-page/mixed-page address-space tests"
 echo "- transaction/rollback state-machine tests"
+echo "- bounded host-memory allocation/write/readback tests"
 echo "- zero device access"
