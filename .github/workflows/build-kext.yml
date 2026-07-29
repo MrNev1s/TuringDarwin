@@ -26,6 +26,11 @@ on:
       - 'kext/**'
       - 'include/**'
       - 'tools/**'
+      - 'research/**'
+      - 'docs/**'
+      - 'README.md'
+      - 'PROJECT_STATE.*'
+      - 'EVIDENCE*.json'
       - 'MacKernelSDK.lock'
   pull_request:
     paths:
@@ -34,6 +39,11 @@ on:
       - 'kext/**'
       - 'include/**'
       - 'tools/**'
+      - 'research/**'
+      - 'docs/**'
+      - 'README.md'
+      - 'PROJECT_STATE.*'
+      - 'EVIDENCE*.json'
       - 'MacKernelSDK.lock'
 
 permissions:
@@ -91,19 +101,12 @@ jobs:
           set -euo pipefail
           chmod +x tools/*.sh tools/*.py
 
-      - name: Validate source and project metadata
+      - name: Run complete offline validation suite
         shell: bash
         run: |
           set -euo pipefail
-          {
-            python3 tools/safety-audit.py
-            python3 tools/test-decoder-contract.py
-            python3 tools/test-mmio-contract.py
-            python3 tools/test-top-contract.py
-            python3 tools/test-fb-mmu-contract.py
-            plutil -lint kext/TuringProbe/Info.plist
-            plutil -lint TuringProbe.xcodeproj/project.pbxproj
-          } 2>&1 | tee build-source-validation.txt
+          bash tools/run-offline-validation.sh 2>&1 | tee build-source-validation.txt
+          plutil -lint TuringProbe.xcodeproj/project.pbxproj
 
       - name: Build kext
         id: build
@@ -138,21 +141,20 @@ jobs:
           mkdir -p dist
           ditto -c -k --sequesterRsrc --keepParent \
             "build/$CONFIGURATION/TuringProbe.kext" \
-            "dist/TuringProbe-v0.5.0-$CONFIGURATION-x86_64.kext.zip"
+            "dist/TuringProbe-v0.5.1-$CONFIGURATION-x86_64.kext.zip"
           cp "build/build-$CONFIGURATION.manifest.txt" dist/
           cp "build/build-$CONFIGURATION.log" dist/
           cp build-source-validation.txt dist/
           cp "build/file-$CONFIGURATION.txt" dist/
           cp "build/architectures-$CONFIGURATION.txt" dist/
           cp "build/undefined-symbols-$CONFIGURATION.txt" dist/
-          test -f "build/kextutil-$CONFIGURATION.txt" && cp "build/kextutil-$CONFIGURATION.txt" dist/ || true
           test -f "build/codesign-$CONFIGURATION.txt" && cp "build/codesign-$CONFIGURATION.txt" dist/ || true
           shasum -a 256 dist/* | tee dist/SHA256SUMS.txt
 
       - name: Upload TuringProbe artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TuringProbe-v0.5.0-${{ steps.build.outputs.configuration }}-x86_64
+          name: TuringProbe-v0.5.1-${{ steps.build.outputs.configuration }}-x86_64
           path: dist/
           if-no-files-found: error
           retention-days: 30
@@ -161,10 +163,11 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: TuringProbe-v0.5.0-failed-build-logs
+          name: TuringProbe-v0.5.1-failed-build-logs
           path: |
             build/*.log
             build/*.txt
+            build-source-validation.txt
             MacKernelSDK.lock
           if-no-files-found: warn
           retention-days: 14
